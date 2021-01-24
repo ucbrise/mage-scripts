@@ -1,0 +1,19 @@
+#cloud-config
+disk_setup:
+    ephemeral0:
+        table_type: gpt
+        layout:
+            - 25
+            - [25, 0x82]
+            - [50, 0x83]
+    overwrite: true
+fs_setup:
+    - device: ephemeral0.2
+      filesystem: swap
+    - device: ephemeral0.3
+      filesystem: ext4
+mounts:
+    - [ ephemeral0 ]
+    - [ ephemeral0.1 ]
+    - [ ephemeral0.2 ]
+    - [ ephemeral0.3 ]
