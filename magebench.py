@@ -90,7 +90,7 @@ def parse_program_list(program_list):
         result.append(parse_program(program))
     return result
 
-def run(args):
+def run_single(args):
     c = cluster.Cluster.load_from_file("cluster.json")
     if len(sys.argv) not in (6, 7):
         print("Usage: {0} problem_name problem_size protocol scenario [log_tag]".format(sys.argv[0]))
@@ -108,7 +108,7 @@ def run(args):
         log_name += "_{0}".format(args.tag)
     experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name)
 
-def run_single_core_experiments(args):
+def run_nonparallel(args):
     if args.programs is None:
         args.programs = ("merge_sorted_1048576", "full_sort_1048576", "loop_join_2048", "matrix_vector_multiply_8192", "binary_fc_layer_16384", "real_sum_65536", "real_statistics_16384", "real_matrix_vector_multiply_256", "real_naive_matrix_multiply_128", "real_tiled_matrix_multiply_128")
     if args.scenarios is None:
@@ -202,17 +202,17 @@ if __name__ == "__main__":
     parser_provision = subparsers.add_parser("provision")
     parser_provision.set_defaults(func = provision)
 
-    parser_run = subparsers.add_parser("run")
+    parser_run = subparsers.add_parser("run-single")
     parser_run.add_argument("program")
     parser_run.add_argument("scenario")
     parser_run.add_argument("--tag")
-    parser_run.set_defaults(func = run)
+    parser_run.set_defaults(func = run_single)
 
-    parser_run_sce = subparsers.add_parser("run-single-core-experiments")
+    parser_run_sce = subparsers.add_parser("run-nonparallel")
     parser_run_sce.add_argument("-p", "--programs", action = "extend", nargs = "+")
     parser_run_sce.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
     parser_run_sce.add_argument("-t", "--trials", type = int, default = 1)
-    parser_run_sce.set_defaults(func = run_single_core_experiments)
+    parser_run_sce.set_defaults(func = run_nonparallel)
 
     parser_run_hgb = subparsers.add_parser("run-halfgates-baseline")
     parser_run_hgb.add_argument("-z", "--sizes", action = "extend", nargs = "+", type = int)
