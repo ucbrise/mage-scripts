@@ -4,3 +4,5 @@ scripts/cluster
 magebench-venv
 cluster.json
 __pycache__
+ckks_keys
+logs

@@ -25,15 +25,15 @@ def copy_to(ip_address, directory, local_location, remote_location = "~"):
     assert remote_location.strip() != ""
     command = ("scp", "-o", "StrictHostKeyChecking=no", "-i", "mage", local_location, "mage@{0}:{1}".format(ip_address, remote_location))
     if directory:
-        command = ("scp", "-o", "StrictHostKeyChecking=no", "-r") + command[1:]
+        command = ("scp", "-o", "StrictHostKeyChecking=no", "-r") + command[3:]
     subprocess.run(command, check = True)
 
-def copy_from(ip_address, directory, remote_location, location_location = "."):
+def copy_from(ip_address, directory, remote_location, local_location = "."):
     assert local_location.strip() != ""
     assert remote_location.strip() != ""
     command = ("scp", "-o", "StrictHostKeyChecking=no", "-i", "mage", "mage@{0}:{1}".format(ip_address, remote_location), local_location)
     if directory:
-        command = ("scp", "-o", "StrictHostKeyChecking=no", "-r") + command[1:]
+        command = ("scp", "-o", "StrictHostKeyChecking=no", "-r") + command[3:]
     subprocess.run(command, check = True)
 
 def exec_script(ip_address, local_location, args = "", sync = True):
