@@ -38,7 +38,12 @@ def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, 
     def generate_memprog(machine, global_id):
         party = party_from_global_id(cluster, global_id)
         local_id = global_id % workers_per_party
-        remote.exec_script(machine.public_ip_address, "./scripts/generate_memprog.sh", "{0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, local_id, log_name))
+        if scenario == "mage":
+            log_name_to_use = log_name
+        else:
+            # So we don't count this as a "planning" measurement
+            log_name_to_use = ""
+        remote.exec_script(machine.public_ip_address, "./scripts/generate_memprog.sh", "{0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, local_id, log_name_to_use))
 
     if generate_fresh_memprog:
         cluster.for_each_concurrently(generate_memprog, worker_ids)
