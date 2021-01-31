@@ -175,7 +175,7 @@ def run_ckks_baseline(args):
 
 def deallocate(args):
     print("Deallocating cluster...")
-    cluster.deallocate(CLUSTER_NAME, CLUSTER_SIZE)
+    cluster.deallocate(args.name)
     try:
         os.remove("cluster.json")
     except os.FileNotFoundError:
@@ -227,6 +227,7 @@ if __name__ == "__main__":
     parser_run_ckb.set_defaults(func = run_ckks_baseline)
 
     parser_deallocate = subparsers.add_parser("deallocate")
+    parser_deallocate.add_argument("-n", "--name", default = "mage-cluster")
     parser_deallocate.set_defaults(func = deallocate)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")

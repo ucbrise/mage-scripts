@@ -10,7 +10,8 @@ from azure.mgmt.compute import ComputeManagementClient
 SUBSCRIPTION_ID = "a8bdae60-f431-4620-bf0a-fad96eb36ca4"
 LOCATION = "westus2"
 #IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps"
-IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-prereqs"
+#IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-prereqs"
+IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps"
 RESOURCE_GROUP = "MAGE-2"
 
 credential = DefaultAzureCredential()
@@ -243,7 +244,7 @@ def spawn(name, count, subscription_id = SUBSCRIPTION_ID, location = LOCATION, i
 
     return c
 
-def deallocate(name, count, subscription_id = SUBSCRIPTION_ID):
+def deallocate(name, subscription_id = SUBSCRIPTION_ID):
     resource_client = ResourceManagementClient(credential, subscription_id)
 
     resource_group = rg_name(name)
