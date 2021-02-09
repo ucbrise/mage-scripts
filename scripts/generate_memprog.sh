@@ -22,7 +22,7 @@ if [[ -z $LOG_NAME ]]
 then
 	./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE
 else
-	./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE > ~/logs/$LOG_NAME.planning
+	./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE > ~/logs/${LOG_NAME}.planning
 fi
 
 rm -f *.prog *.repprog *.ann

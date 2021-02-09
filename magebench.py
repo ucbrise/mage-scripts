@@ -25,7 +25,7 @@ def validate_scenario(scenario):
 def provision_machine(machine, id):
     remote.exec_script(machine.public_ip_address, "./scripts/provision.sh")
     remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
-    remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json 0 ~/config")
+    remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} ~/config".format(id))
 
 def copy_ckks_keys(machine, id):
     remote.copy_to(machine.public_ip_address, True, "./ckks_keys", "~")
@@ -98,35 +98,44 @@ def run_single(args):
     problem_name, problem_size = parse_program(args.program)
     if problem_name.startswith("real"):
         protocol = "ckks"
-        worker_ids = (0,)
+        worker_ids = range(len(c.machines) // 2)
     else:
         protocol = "halfgates"
-        worker_ids = (0, 1)
+        worker_ids = range(len(c.machines))
     scenario = args.scenario
     log_name = "{0}_{1}_{2}".format(problem_name, problem_size, scenario)
+    if args.label is not None:
+        log_name = "{0}_{1}".format(args.label, log_name)
     if args.tag is not None:
         log_name += "_{0}".format(args.tag)
-    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name)
+    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name, args.workers)
 
 def run_nonparallel(args):
+    c = cluster.Cluster.load_from_file("cluster.json")
     if args.programs is None:
-        args.programs = ("merge_sorted_1048576", "full_sort_1048576", "loop_join_2048", "matrix_vector_multiply_8192", "binary_fc_layer_16384", "real_sum_65536", "real_statistics_16384", "real_matrix_vector_multiply_256", "real_naive_matrix_multiply_128", "real_tiled_matrix_multiply_128")
+        if len(c.machines) == 2:
+            args.programs = ("merge_sorted_1048576", "full_sort_1048576", "loop_join_2048", "matrix_vector_multiply_8192", "binary_fc_layer_16384", "real_sum_65536", "real_statistics_16384", "real_matrix_vector_multiply_256", "real_naive_matrix_multiply_128", "real_tiled_matrix_multiply_128")
+        elif len(c.machines) == 8:
+            args.programs = ("merge_sorted_4194304", "full_sort_4194304", "loop_join_4096", "matrix_vector_multiply_16384", "binary_fc_layer_32768", "real_sum_262144", "real_statistics_65536", "real_matrix_vector_multiply_512", "real_naive_matrix_multiply_256", "real_tiled_matrix_multiply_256")
+        else:
+            print("Could not infer default list of programs for {0}-machine cluster".format(len(c.machines)))
+            args.programs = tuple()
     if args.scenarios is None:
         args.scenarios = ("mage", "unbounded", "os")
 
-    c = cluster.Cluster.load_from_file("cluster.json")
     parsed_programs = parse_program_list(args.programs)
     for problem_name, problem_size in parsed_programs:
         if problem_name.startswith("real"):
             protocol = "ckks"
-            worker_ids = (0,)
+            worker_ids = range(len(c.machines) // 2)
         else:
             protocol = "halfgates"
-            worker_ids = (0, 1)
+            worker_ids = range(len(c.machines))
         for trial in range(1, args.trials + 1):
             for scenario in args.scenarios:
-                log_name = "single_machine_{0}_{1}_{2}_t{3}".format(problem_name, problem_size, scenario, trial)
-                experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name)
+                num_workers_per_party = (len(c.machines) // 2) if args.workers is None else args.workers
+                log_name = "workers_{0}_{1}_{2}_{3}_t{4}".format(num_workers_per_party, problem_name, problem_size, scenario, trial)
+                experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name, args.workers)
 
 
 def run_halfgates_baseline(args):
@@ -205,13 +214,16 @@ if __name__ == "__main__":
     parser_run = subparsers.add_parser("run-single")
     parser_run.add_argument("program")
     parser_run.add_argument("scenario")
-    parser_run.add_argument("--tag")
+    parser_run.add_argument("-l", "--label")
+    parser_run.add_argument("-g", "--tag")
+    parser_run.add_argument("-w", "--workers", type = int)
     parser_run.set_defaults(func = run_single)
 
     parser_run_sce = subparsers.add_parser("run-nonparallel")
     parser_run_sce.add_argument("-p", "--programs", action = "extend", nargs = "+")
     parser_run_sce.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
     parser_run_sce.add_argument("-t", "--trials", type = int, default = 1)
+    parser_run_sce.add_argument("-w", "--workers", type = int)
     parser_run_sce.set_defaults(func = run_nonparallel)
 
     parser_run_hgb = subparsers.add_parser("run-halfgates-baseline")

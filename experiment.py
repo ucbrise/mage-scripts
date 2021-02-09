@@ -10,14 +10,15 @@ def party_from_global_id(cluster, global_id):
 def clear_memory_caches(cluster, worker_ids):
     cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), worker_ids)
 
-def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, worker_ids, log_name = "/dev/null", generate_fresh_input = True, generate_fresh_memprog = True):
-    if protocol == "halfgates":
-        assert len(worker_ids) % 2 == 0
-        workers_per_party = len(worker_ids) // 2
-    elif protocol == "ckks":
-        workers_per_party = len(worker_ids)
-    else:
-        raise RuntimeError("Unknown protocol {0}".format(protocol))
+def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, worker_ids, log_name = "/dev/null", workers_per_party = None, generate_fresh_input = True, generate_fresh_memprog = True):
+    if workers_per_party is None:
+        if protocol == "halfgates":
+            assert len(worker_ids) % 2 == 0
+            workers_per_party = len(worker_ids) // 2
+        elif protocol == "ckks":
+            workers_per_party = len(worker_ids)
+        else:
+            raise RuntimeError("Unknown protocol {0}".format(protocol))
 
     program_name = "{0}_{1}".format(problem_name, problem_size)
     config_file = "~/config/{0}/config_{1}_{2}.yaml".format("1gb" if scenario == "mage" else "unbounded", protocol, workers_per_party)
@@ -30,7 +31,8 @@ def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, 
         raise RuntimeError("log_name must be a string (got {0})".format(repr(log_name)))
 
     def generate_input(machine, global_id):
-        remote.exec_script(machine.public_ip_address, "./scripts/generate_input.sh", "{0} {1} {2} {3} {4}".format(problem_name, problem_size, protocol, global_id % workers_per_party, workers_per_party))
+        local_id = global_id % workers_per_party
+        remote.exec_script(machine.public_ip_address, "./scripts/generate_input.sh", "{0} {1} {2} {3} {4}".format(problem_name, problem_size, protocol, local_id, workers_per_party))
 
     if generate_fresh_input:
         cluster.for_each_concurrently(generate_input, worker_ids)
@@ -51,8 +53,9 @@ def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, 
     def run_mage(machine, global_id):
         party = party_from_global_id(cluster, global_id)
         local_id = global_id % workers_per_party
+        time.sleep(10 * local_id)
         if party == 1:
-            time.sleep(30) # Wait for the evaluator to start first
+            time.sleep(10 * workers_per_party + 20) # Wait for all evaluator workers to start first
         remote.exec_script(machine.public_ip_address, "./scripts/run_mage.sh", "{0} {1} {2} {3} {4} {5} {6} {7}".format(scenario, protocol, config_file, party, local_id, program_name, log_name, "true"))
 
     if protocol != "ckks":
