@@ -20,6 +20,8 @@ def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, 
         else:
             raise RuntimeError("Unknown protocol {0}".format(protocol))
 
+    assert(len(cluster.machines) == cluster.num_lan_machines)
+
     program_name = "{0}_{1}".format(problem_name, problem_size)
     config_file = "~/config/{0}/config_{1}_{2}.yaml".format("1gb" if scenario == "mage" else "unbounded", protocol, workers_per_party)
 

@@ -5,6 +5,7 @@ import shutil
 import sys
 import time
 
+import cloud
 import cluster
 import experiment
 import remote
@@ -23,7 +24,7 @@ def validate_scenario(scenario):
     return scenario
 
 def provision_machine(machine, id):
-    remote.exec_script(machine.public_ip_address, "./scripts/provision.sh")
+    remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", machine.provider)
     remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
     remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} ~/config".format(id))
 
@@ -56,9 +57,11 @@ def spawn(args):
         print("Cluster already exists!")
         print("To create a new cluster, first run \"{0} deallocate\"".format(sys.argv[0]))
         sys.exit(1)
-    assert args.size > 0
+    # assert args.azure_machine_count > 0
+    if args.gcloud_machine_locations is None:
+        args.gcloud_machine_locations = tuple()
     print("Spawning cluster...")
-    c = cluster.spawn(args.name, args.size)
+    c = cloud.spawn_cluster(args.name, args.azure_machine_count, *args.gcloud_machine_locations)
     c.save_to_file("cluster.json")
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
@@ -184,10 +187,22 @@ def run_ckks_baseline(args):
 
 def deallocate(args):
     print("Deallocating cluster...")
-    cluster.deallocate(args.name)
+    c = cluster.Cluster.load_from_file("cluster.json")
+    cloud.deallocate_cluster(c)
     try:
         os.remove("cluster.json")
-    except os.FileNotFoundError:
+    except FileNotFoundError:
+        pass
+    print("Done.")
+
+def purge(args):
+    print("Purging cluster...")
+    if args.gcloud_machine_locations is None:
+        args.gcloud_machine_locations = tuple()
+    cloud.deallocate_cluster_by_info(args.name, *args.gcloud_machine_locations)
+    try:
+        os.remove("cluster.json")
+    except FileNotFoundError:
         pass
     print("Done.")
 
@@ -205,7 +220,8 @@ if __name__ == "__main__":
 
     parser_spawn = subparsers.add_parser("spawn")
     parser_spawn.add_argument("-n", "--name", default = "mage-cluster")
-    parser_spawn.add_argument("-z", "--size", type = int, default = 2)
+    parser_spawn.add_argument("-a", "--azure-machine-count", type = int, default = 2)
+    parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
     parser_spawn.set_defaults(func = spawn)
 
     parser_provision = subparsers.add_parser("provision")
@@ -239,8 +255,13 @@ if __name__ == "__main__":
     parser_run_ckb.set_defaults(func = run_ckks_baseline)
 
     parser_deallocate = subparsers.add_parser("deallocate")
-    parser_deallocate.add_argument("-n", "--name", default = "mage-cluster")
+    # parser_deallocate.add_argument("-n", "--name", default = "mage-cluster")
     parser_deallocate.set_defaults(func = deallocate)
+
+    parser_purge = subparsers.add_parser("purge")
+    parser_purge.add_argument("-n", "--name", default = "mage-cluster")
+    parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
+    parser_purge.set_defaults(func = purge)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")
     parser_fetch_logs.set_defaults(func = fetch_logs)

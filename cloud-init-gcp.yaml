@@ -1,0 +1,19 @@
+#cloud-config
+disk_setup:
+    /dev/nvme0n1:
+        table_type: gpt
+        layout:
+            - 16
+            - [16, 0x82]
+            - [68, 0x83]
+    overwrite: true
+fs_setup:
+    - device: /dev/nvme0n1p2
+      filesystem: swap
+    - device: /dev/nvme0n1p3
+      filesystem: ext4
+mounts:
+    - [ /dev/nvme0n1 ]
+    - [ /dev/nvme0n1p1 ]
+    - [ /dev/nvme0n1p2 ]
+    - [ /dev/nvme0n1p3 ]
