@@ -5,23 +5,25 @@ import sys
 import os
 import yaml
 
-def generate_worker_config_dict(global_id, internal_port, external_port, cluster, wan = False):
+def generate_worker_config_dict(global_id, internal_port, external_port, cluster, wan = False, worker_id = None):
     worker = {}
     worker["internal_host"] = cluster["machines"][global_id]["private_ip_address"]
     worker["internal_port"] = internal_port
     worker["external_host"] = cluster["machines"][global_id]["public_ip_address" if wan else "private_ip_address"]
     worker["external_port"] = external_port
-    worker["storage_path"] = "/dev/disk/cloud/azure_resource-part1"
+    if wan:
+        worker["storage_path"] = "worker{0}_swapfile".format(worker_id)
+    else:
+        worker["storage_path"] = "/dev/disk/cloud/azure_resource-part1"
     return worker
 
-def generate_config_dict(protocol, scenario, party_size, id, cluster):
-    config = {}
+def populate_top_level_params(protocol, scenario, split_factor, config, ot_pipeline_depth = 1, ot_num_daemons = 3):
     if protocol == "halfgates":
         config["page_shift"] = 12
         if scenario == "unbounded":
             config["num_pages"] = 524288
         elif scenario == "1gb":
-            config["num_pages"] = 14848
+            config["num_pages"] = (16384 // split_factor) - 1536
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
         config["prefetch_buffer_size"] = 256
@@ -29,21 +31,25 @@ def generate_config_dict(protocol, scenario, party_size, id, cluster):
 
         ot = {}
         ot["max_batch_size"] = 512
-        ot["pipeline_depth"] = 1
-        ot["num_daemons"] = 3
+        ot["pipeline_depth"] = ot_pipeline_depth
+        ot["num_daemons"] = ot_num_daemons
         config["oblivious_transfer"] = ot
     elif protocol == "ckks":
         config["page_shift"] = 21
         if scenario == "unbounded":
             config["num_pages"] = 16384
         elif scenario == "1gb":
-            config["num_pages"] = 464
+            config["num_pages"] = (512 // split_factor) - 48
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
         config["prefetch_buffer_size"] = 16
         config["prefetch_lookahead"] = 100
     else:
         raise RuntimeError("Unknown protocol {0}".format(protocol))
+
+def generate_config_dict(protocol, scenario, party_size, id, cluster):
+    config = {}
+    populate_top_level_params(protocol, scenario, 1, config)
 
     assert party_size & (party_size - 1) == 0
     first_worker_id = party_size * (id // party_size)
@@ -54,14 +60,23 @@ def generate_config_dict(protocol, scenario, party_size, id, cluster):
     else:
         evaluator_ids = range(first_worker_id - allocated_workers_per_party, first_worker_id - allocated_workers_per_party + party_size)
         garbler_ids = range(first_worker_id, first_worker_id + party_size)
-    evaluator_workers = [generate_worker_config_dict(evaluator_ids[i], 56000 + i, 57000 + i, cluster) for i in range(party_size)]
-    garbler_workers = [generate_worker_config_dict(garbler_ids[i], 56000 + i, 57000 + i, cluster) for i in range(party_size)]
+    evaluator_workers = [generate_worker_config_dict(evaluator_ids[i], 56000 + i, 57000 + i, cluster, False) for i in range(party_size)]
+    garbler_workers = [generate_worker_config_dict(garbler_ids[i], 56000 + i, 57000 + i, cluster, False) for i in range(party_size)]
+    config["parties"] = [{"workers": evaluator_workers}, {"workers": garbler_workers}]
+    return config
+
+def generate_wan_config_dict(scenario, num_workers_per_party, azure_id, gcloud_id, cluster, ot_pipeline_depth = 1, ot_num_daemons = 3):
+    config = {}
+    populate_top_level_params("halfgates", scenario, num_workers_per_party, config, ot_pipeline_depth, ot_num_daemons)
+
+    evaluator_workers = [generate_worker_config_dict(gcloud_id, 56000 + i, 57000 + i, cluster, True, i) for i in range(party_size)]
+    garbler_workers = [generate_worker_config_dict(azure_id, 56000 + i, 57000 + i, cluster, True, i) for i in range(party_size)]
     config["parties"] = [{"workers": evaluator_workers}, {"workers": garbler_workers}]
     return config
 
 if __name__ == "__main__":
-    if len(sys.argv) != 4:
-        print("Usage: {0} cluster.json id output_dir".format(sys.argv[0]))
+    if len(sys.argv) != 5:
+        print("Usage: {0} cluster.json id lan/location output_dir".format(sys.argv[0]))
         sys.exit(2)
 
     with open(sys.argv[1], "r") as f:
@@ -69,7 +84,9 @@ if __name__ == "__main__":
 
     id = int(sys.argv[2])
 
-    creation_dir = sys.argv[3]
+    location = sys.argv[3]
+
+    creation_dir = sys.argv[4]
 
     unbounded_dir = os.path.join(creation_dir, "unbounded")
     bounded_dir = os.path.join(creation_dir, "1gb")
@@ -77,16 +94,29 @@ if __name__ == "__main__":
     os.makedirs(unbounded_dir, exist_ok = True)
     os.makedirs(bounded_dir, exist_ok = True)
 
-    party_sizes = []
-    party_size = 1
-    while party_size < len(cluster["machines"]):
-        party_sizes.append(party_size)
-        party_size *= 2
+    if location == "lan" or location == "local":
+        party_sizes = []
+        party_size = 1
+        while party_size < cluster["num_lan_machines"]:
+            party_sizes.append(party_size)
+            party_size *= 2
 
-    for protocol in ("halfgates", "ckks"):
+        for protocol in ("halfgates", "ckks"):
+            for scenario, output_dir_path in (("unbounded", unbounded_dir), ("1gb", bounded_dir)):
+                for party_size in party_sizes:
+                    config_dict = generate_config_dict(protocol, scenario, party_size, id, cluster)
+                    output_path = os.path.join(output_dir_path, "config_{0}_{1}.yaml".format(protocol, party_size))
+                    with open(output_path, "w") as f:
+                        yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)
+    else:
+        azure_id = id
+        gcloud_id = cluster["location_to_id"][location]
         for scenario, output_dir_path in (("unbounded", unbounded_dir), ("1gb", bounded_dir)):
-            for party_size in party_sizes:
-                config_dict = generate_config_dict(protocol, scenario, party_size, id, cluster)
-                output_path = os.path.join(output_dir_path, "config_{0}_{1}.yaml".format(protocol, party_size))
-                with open(output_path, "w") as f:
-                    yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)
+            for party_size in (1, 2, 4, 8, 16):
+                for ot_pipeline_depth in tuple(2 ** i for i in range(8)):
+                    for ot_num_daemons in tuple(2 ** i for i in range(8)):
+                        ot_params = (ot_pipeline_depth, ot_num_daemons)
+                        config_dict = generate_wan_config_dict(scenario, party_size, azure_id, gcloud_id, cluster, *ot_params)
+                        output_path = os.path.join(output_dir_path, "config_halfgates_{0}_{1}_{2}.yaml".format(party_size, ot_pipeline_depth, ot_num_daemons))
+                        with open(output_path, "w") as f:
+                            yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)

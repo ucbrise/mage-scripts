@@ -23,11 +23,6 @@ def validate_scenario(scenario):
         print("Scenario must be unbounded, os, or mage (got {0})".format(scenario))
     return scenario
 
-def provision_machine(machine, id):
-    remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", machine.provider)
-    remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
-    remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} ~/config".format(id))
-
 def copy_ckks_keys(machine, id):
     remote.copy_to(machine.public_ip_address, True, "./ckks_keys", "~")
     remote.exec_sync(machine.public_ip_address, "cp ~/ckks_keys/* ~/work/mage/bin")
@@ -42,6 +37,14 @@ def generate_ckks_keys(c):
         shutil.rmtree("./ckks_keys")
 
 def provision_cluster(c):
+    def provision_machine(machine, id):
+        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", machine.provider)
+        remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
+        if id < c.num_lan_machines:
+            remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config".format(id))
+        for location, loc_id in c.location_to_id.items():
+            if id == 0 or id == loc_id:
+                remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json 0 {0} ~/config-{0}".format(location))
     c.for_each_concurrently(provision_machine)
     generate_ckks_keys(c)
 
@@ -57,7 +60,7 @@ def spawn(args):
         print("Cluster already exists!")
         print("To create a new cluster, first run \"{0} deallocate\"".format(sys.argv[0]))
         sys.exit(1)
-    # assert args.azure_machine_count > 0
+    assert args.azure_machine_count > 0
     if args.gcloud_machine_locations is None:
         args.gcloud_machine_locations = tuple()
     print("Spawning cluster...")
@@ -66,7 +69,7 @@ def spawn(args):
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
     print("Provisioning the machines...")
-    c.for_each_concurrently(provision_machine)
+    provision_cluster(c)
     print("Done.")
 
 def provision(args):
@@ -113,7 +116,7 @@ def run_single(args):
         log_name += "_{0}".format(args.tag)
     experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name, args.workers)
 
-def run_nonparallel(args):
+def run_lan(args):
     c = cluster.Cluster.load_from_file("cluster.json")
     if args.programs is None:
         if len(c.machines) == 2:
@@ -140,6 +143,26 @@ def run_nonparallel(args):
                 log_name = "workers_{0}_{1}_{2}_{3}_t{4}".format(num_workers_per_party, problem_name, problem_size, scenario, trial)
                 experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name, args.workers)
 
+def run_wan(args):
+    c = cluster.Cluster.load_from_file("cluster.json")
+    if args.programs is None:
+        args.programs = ("merge_sorted_1048576",)
+    if args.scenarios is None:
+        args.scenarios = ("mage",)
+
+    parsed_programs = parse_program_list(args.programs)
+    for problem_name, problem_size in parsed_programs:
+        if problem_name.startswith("real"):
+            print("Skipping {0} (only halfgates supported over WAN)".format(problem_name))
+            continue
+        else:
+            protocol = "halfgates"
+        for trial in range(1, args.trials + 1):
+            for scenario in args.scenarios:
+                for ot_num_daemons in args.ot_num_daemons:
+                    for ot_pipeline_depth in args.ot_pipeline_depth:
+                        log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, args.workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
+                        experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.location, log_name, args.workers_per_node, ot_pipeline_depth, ot_num_daemons)
 
 def run_halfgates_baseline(args):
     if args.sizes is None:
@@ -235,12 +258,22 @@ if __name__ == "__main__":
     parser_run.add_argument("-w", "--workers", type = int)
     parser_run.set_defaults(func = run_single)
 
-    parser_run_sce = subparsers.add_parser("run-nonparallel")
-    parser_run_sce.add_argument("-p", "--programs", action = "extend", nargs = "+")
-    parser_run_sce.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
-    parser_run_sce.add_argument("-t", "--trials", type = int, default = 1)
-    parser_run_sce.add_argument("-w", "--workers", type = int)
-    parser_run_sce.set_defaults(func = run_nonparallel)
+    parser_run_lan = subparsers.add_parser("run-lan")
+    parser_run_lan.add_argument("-p", "--programs", action = "extend", nargs = "+")
+    parser_run_lan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
+    parser_run_lan.add_argument("-t", "--trials", type = int, default = 1)
+    parser_run_lan.add_argument("-w", "--workers", type = int)
+    parser_run_lan.set_defaults(func = run_lan)
+
+    parser_run_wan = subparsers.add_parser("run-wan")
+    parser_run_wan.add_argument("location", choices = ("oregon", "iowa"))
+    parser_run_wan.add_argument("-p", "--programs", action = "extend", nargs = "+")
+    parser_run_wan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
+    parser_run_wan.add_argument("-t", "--trials", type = int, default = 1)
+    parser_run_wan.add_argument("-w", "--workers-per-node", type = int, default = 1)
+    parser_run_wan.add_argument("-d", "--ot-pipeline-depth", type = int, action = "extend", nargs = "+")
+    parser_run_wan.add_argument("-c", "--ot-num_daemons", type = int, action = "extend", nargs = "+")
+    parser_run_wan.set_defaults(func = run_wan)
 
     parser_run_hgb = subparsers.add_parser("run-halfgates-baseline")
     parser_run_hgb.add_argument("-z", "--sizes", action = "extend", nargs = "+", type = int)

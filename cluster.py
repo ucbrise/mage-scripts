@@ -60,6 +60,19 @@ class Cluster(object):
         for t in threads:
             t.join()
 
+    def for_each_multiple_concurrently(self, predicate, times, ids = None):
+        if ids is None:
+            ids = range(len(self.machines))
+        threads = [[None for _ in range(times)] for _ in ids]
+        for i, id in enumerate(ids):
+            for j in range(times):
+                t = threading.Thread(target = lambda: predicate(self.machines[id], id, j))
+                threads[i][j] = t
+                t.start()
+        for lst in threads:
+            for t in lst:
+                t.join()
+
     def as_dict(self):
         d = dict(self.__dict__)
         d["machines"] = tuple(m.as_dict() for m in d["machines"])

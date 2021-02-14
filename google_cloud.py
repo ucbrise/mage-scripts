@@ -64,7 +64,9 @@ def spawn_instance(m, name, region, zone_letter, project_name = GCP_PROJECT):
             ]
         },
         "tags": {
-            "items": []
+            "items": [
+                "mage-wan" # Associates this instance with a firewall rule that allows inbound TCP connections on the relevant ports
+            ]
         },
         "disks": [
             {
