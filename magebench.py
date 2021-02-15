@@ -149,6 +149,10 @@ def run_wan(args):
         args.programs = ("merge_sorted_1048576",)
     if args.scenarios is None:
         args.scenarios = ("mage",)
+    if args.ot_num_connections is None:
+        args.ot_num_connections = (3,)
+    if args.ot_concurrency is None:
+        args.ot_concurrency = (3,)
 
     parsed_programs = parse_program_list(args.programs)
     for problem_name, problem_size in parsed_programs:
@@ -159,8 +163,9 @@ def run_wan(args):
             protocol = "halfgates"
         for trial in range(1, args.trials + 1):
             for scenario in args.scenarios:
-                for ot_num_daemons in args.ot_num_daemons:
-                    for ot_pipeline_depth in args.ot_pipeline_depth:
+                for ot_num_daemons in args.ot_num_connections:
+                    for ot_concurrency in args.ot_concurrency:
+                        ot_pipeline_depth = max(ot_concurrency // ot_num_daemons, 1)
                         log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, args.workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
                         experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.location, log_name, args.workers_per_node, ot_pipeline_depth, ot_num_daemons)
 
@@ -271,8 +276,8 @@ if __name__ == "__main__":
     parser_run_wan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
     parser_run_wan.add_argument("-t", "--trials", type = int, default = 1)
     parser_run_wan.add_argument("-w", "--workers-per-node", type = int, default = 1)
-    parser_run_wan.add_argument("-d", "--ot-pipeline-depth", type = int, action = "extend", nargs = "+")
-    parser_run_wan.add_argument("-c", "--ot-num_daemons", type = int, action = "extend", nargs = "+")
+    parser_run_wan.add_argument("-o", "--ot-concurrency", type = int, action = "extend", nargs = "+")
+    parser_run_wan.add_argument("-c", "--ot-num-connections", type = int, action = "extend", nargs = "+")
     parser_run_wan.set_defaults(func = run_wan)
 
     parser_run_hgb = subparsers.add_parser("run-halfgates-baseline")

@@ -43,7 +43,7 @@ def run_wan_experiment(cluster, problem_name, problem_size, scenario, location, 
     def generate_memprog(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
         if scenario == "mage":
-            log_name_to_use = log_name
+            log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, thread_id)
         else:
             # So we don't count this as a "planning" measurement
             log_name_to_use = ""
@@ -56,7 +56,8 @@ def run_wan_experiment(cluster, problem_name, problem_size, scenario, location, 
         time.sleep(10 * thread_id)
         if party == 1:
             time.sleep(10 * workers_per_node + 20) # Wait for all evaluator workers to start first
-        remote.exec_sync(machine.public_ip_address, "~/run_mage.sh {0} {1} {2} {3} {4} {5} {6} {7}".format(scenario, protocol, config_file, party, thread_id, program_name, log_name, "true"))
+        log_name_to_use = "{0}_w{1}".format(log_name, thread_id)
+        remote.exec_sync(machine.public_ip_address, "~/run_mage.sh {0} {1} {2} {3} {4} {5} {6} {7}".format(scenario, protocol, config_file, party, thread_id, program_name, log_name_to_use, "true"))
 
     if protocol != "ckks":
         time.sleep(70) # Wait for TIME-WAIT state to expire
