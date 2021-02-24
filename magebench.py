@@ -48,13 +48,6 @@ def provision_cluster(c):
     c.for_each_concurrently(provision_machine)
     generate_ckks_keys(c)
 
-def logs_directory(id):
-    return os.path.join(".", "logs", "{0:02d}".format(id))
-
-def fetch_logs_from(machine, id):
-    directory = logs_directory(id)
-    remote.copy_from(machine.public_ip_address, False, "~/logs/*", directory)
-
 def spawn(args):
     if os.path.exists("cluster.json"):
         print("Cluster already exists!")
@@ -149,6 +142,8 @@ def run_wan(args):
         args.programs = ("merge_sorted_1048576",)
     if args.scenarios is None:
         args.scenarios = ("mage",)
+    if args.workers_per_node is None:
+        args.workers_per_node = (1,)
     if args.ot_num_connections is None:
         args.ot_num_connections = (3,)
     if args.ot_concurrency is None:
@@ -163,11 +158,12 @@ def run_wan(args):
             protocol = "halfgates"
         for trial in range(1, args.trials + 1):
             for scenario in args.scenarios:
-                for ot_num_daemons in args.ot_num_connections:
-                    for ot_concurrency in args.ot_concurrency:
-                        ot_pipeline_depth = max(ot_concurrency // ot_num_daemons, 1)
-                        log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, args.workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
-                        experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.location, log_name, args.workers_per_node, ot_pipeline_depth, ot_num_daemons)
+                for workers_per_node in args.workers_per_node:
+                    for ot_num_daemons in args.ot_num_connections:
+                        for ot_concurrency in args.ot_concurrency:
+                            ot_pipeline_depth = max(ot_concurrency // (ot_num_daemons * workers_per_node), 1)
+                            log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
+                            experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons)
 
 def run_halfgates_baseline(args):
     if args.sizes is None:
@@ -234,11 +230,26 @@ def purge(args):
         pass
     print("Done.")
 
+def logs_directory(c, id, logs_directory):
+    if id < c.num_lan_machines:
+        directory_name = "{0:02d}".format(id)
+    else:
+        for location, loc_id in c.location_to_id.items():
+            if id == loc_id:
+                directory_name = location
+                break
+    return os.path.join(".", logs_directory, directory_name)
+
 def fetch_logs(args):
     print("Fetching logs...")
     c = cluster.Cluster.load_from_file("cluster.json")
     for id in range(len(c.machines)):
-        os.makedirs(logs_directory(id), exist_ok = True)
+        os.makedirs(logs_directory(c, id, args.directory), exist_ok = True)
+
+    def fetch_logs_from(machine, id):
+        directory = logs_directory(c, id, args.directory)
+        remote.copy_from(machine.public_ip_address, False, "~/logs/*", directory)
+
     c.for_each_concurrently(fetch_logs_from)
     print("Done.")
 
@@ -275,7 +286,7 @@ if __name__ == "__main__":
     parser_run_wan.add_argument("-p", "--programs", action = "extend", nargs = "+")
     parser_run_wan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
     parser_run_wan.add_argument("-t", "--trials", type = int, default = 1)
-    parser_run_wan.add_argument("-w", "--workers-per-node", type = int, default = 1)
+    parser_run_wan.add_argument("-w", "--workers-per-node", type = int, action = "extend", nargs = "+")
     parser_run_wan.add_argument("-o", "--ot-concurrency", type = int, action = "extend", nargs = "+")
     parser_run_wan.add_argument("-c", "--ot-num-connections", type = int, action = "extend", nargs = "+")
     parser_run_wan.set_defaults(func = run_wan)
@@ -298,10 +309,12 @@ if __name__ == "__main__":
 
     parser_purge = subparsers.add_parser("purge")
     parser_purge.add_argument("-n", "--name", default = "mage-cluster")
+    parser_purge.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
     parser_purge.set_defaults(func = purge)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")
+    parser_fetch_logs.add_argument("directory")
     parser_fetch_logs.set_defaults(func = fetch_logs)
 
     args = parser.parse_args()

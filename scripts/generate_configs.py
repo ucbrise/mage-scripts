@@ -113,8 +113,8 @@ if __name__ == "__main__":
         gcloud_id = cluster["location_to_id"][location]
         for scenario, output_dir_path in (("unbounded", unbounded_dir), ("1gb", bounded_dir)):
             for party_size in (1, 2, 4, 8, 16):
-                for ot_pipeline_depth in tuple(2 ** i for i in range(8)):
-                    for ot_num_daemons in tuple(2 ** i for i in range(8)):
+                for ot_pipeline_depth in tuple(2 ** i for i in range(9)):
+                    for ot_num_daemons in tuple(2 ** i for i in range(9)):
                         ot_params = (ot_pipeline_depth, ot_num_daemons)
                         config_dict = generate_wan_config_dict(scenario, party_size, azure_id, gcloud_id, cluster, *ot_params)
                         output_path = os.path.join(output_dir_path, "config_halfgates_{0}_{1}_{2}.yaml".format(party_size, ot_pipeline_depth, ot_num_daemons))

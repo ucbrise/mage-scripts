@@ -23,6 +23,8 @@ def spawn_cluster(name, num_lan_machines, *wan_machine_locations):
             return None
         gcp_locations.append(region_zone)
 
+    gcp_lock = threading.Lock()
+
     def init(_, id):
         if id == 0 and num_lan_machines > 0:
             # Initializes all machines from indices 0 to num_lan_machines - 1
@@ -33,18 +35,22 @@ def spawn_cluster(name, num_lan_machines, *wan_machine_locations):
             c.location_to_id[wan_location] = id
             region_zone = gcp_locations[wan_index]
             gcp_instance_name = "{0}-{1}".format(name, wan_location)
-            google_cloud.spawn_instance(c.machines[id], gcp_instance_name, *region_zone)
+            with gcp_lock:
+                google_cloud.spawn_instance(c.machines[id], gcp_instance_name, *region_zone)
 
     c.for_each_concurrently(init)
     c.num_lan_machines = num_lan_machines
     return c
 
 def deallocate_cluster(c):
+    gcp_lock = threading.Lock()
+
     def deallocate(m, id):
         if id == 0:
             azure_cloud.deallocate_cluster(c.name)
         elif id >= c.num_lan_machines:
-            google_cloud.deallocate_instance(m)
+            with gcp_lock:
+                google_cloud.deallocate_instance(m)
 
     c.for_each_concurrently(deallocate)
 

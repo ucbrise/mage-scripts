@@ -25,4 +25,4 @@ else
 	./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE > ~/logs/${LOG_NAME}.planning
 fi
 
-rm -f *.prog *.repprog *.ann
+rm -f ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}.prog ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}.repprog ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}.ann
