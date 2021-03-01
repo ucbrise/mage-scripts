@@ -106,7 +106,7 @@ $ ./magebench.py fetch-logs
 Once you have the logs locally, you can use an IPython notebook to generate figures in the same form as the ones in the OSDI paper. Run `jupyter notebook` and open `graphs.ipynb` to do this.
 
 A Simple, Guided Example (15 minutes working, 20 minutes waiting)
----------------------------------------------
+-----------------------------------------------------------------
 Now that you're able to spawn and deallocate a cluster, let's walk through a simple example in which you run an experiment and generate a plot using the provided scripts.
 
 First, start a cluster:
@@ -146,10 +146,10 @@ Run the following commands:
 $ ./magebench.py spawn -a 2
 $ ./magebench.py run-halfgates-baseline -t 1 -s os unbounded mage emp -z 1024 2048 4096 8192 16384 32768 65536 131072 262144 524288 1048576
 $ ./magebench.py run-ckks-baseline -t 1 -s os unbounded mage seal -z 64 128 256 512 1024 2048 4096 8192 16384
-$ ./magebench.py fetch-logs
-$ mv logs logs-baseline
+$ ./magebench.py fetch-logs logs-baseline
 $ ./magebench.py deallocate
 ```
+After running the `fetch-logs` command, you should see a local directory `logs-baseline` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Baseline Experiments** section. Make sure that the first cell assigns `baseline_directory` correctly (this should be `logs-baseline`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graphs should be similar to Figures 6 and 7 in the paper.
 
 Ten Workloads: One Worker Per Party
 -----------------------------------
@@ -157,10 +157,12 @@ Run the following commands:
 ```
 $ ./magebench.py spawn -a 2
 $ ./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_matrix_multiply_128 -s unbounded mage os -t 1 -w 1
-$ ./magebench.py fetch-logs
-$ mv logs logs-workloads-2
+$ ./magebench.py fetch-logs logs-workloads-2
 $ ./magebench.py deallocate
 ```
+After running the `fetch-logs` command, you should see a local directory `logs-workloads-2` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Single-Node Experiments** section. Make sure that the first cell assigns `single_node_directory` correctly (this should be `logs-workloads-2`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 8 in the paper.
+
+The graph given in the paper was produced form 8 trials for each experiment, on different instances. The graph in the IPython notebook is produced using only one trial, so no error bars are present, and some variation should be expected. In particular, the error bars in the paper depict the quartiles, so there is about a 50% chance that the results obtained by running the above command will be within the error bars. My qualitative observation is that the deviation from the median appears consistent for each machine. In other words, if one workload runs more slowly (respectively, quickly) than the median on one machine or pair of machines, the remaining workloads are also likely to run more slowly (respectively, quickly) on that machine or pair of machines.
 
 Ten Workloads: Four Workers Per Party
 -------------------------------------
@@ -168,10 +170,12 @@ Run the following commands:
 ```
 $ ./magebench.py spawn -a 8
 $ ./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_matrix_multiply_256 -s unbounded mage os -t 1 -w 4
-$ ./magebench.py fetch-logs
-$ mv logs logs-workloads-8
+$ ./magebench.py fetch-logs logs-workloads-8
 $ ./magebench.py deallocate
 ```
+After running the `fetch-logs` command, you should see a local directory `logs-workloads-8` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **p = 4 Parallelism Experiments** section. Make sure that the first cell assigns `multi_node_directory` correctly (this should be `logs-workloads-8`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 9 in the paper.
+
+No error bars are presented in the paper, so some variation should be expected. Just as in the previous figure, all of the workloads are likely to deviate from those in the paper in the same direction.
 
 WAN Experiments: Parallel OTs (5 minutes working, 24 hours waiting)
 -----------------------------
@@ -179,10 +183,12 @@ Run the following commands:
 ```
 $ ./magebench.py spawn -a 1 -g oregon
 $ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 -o 2 4 8 16 32 64 128 256 -c 2
-$ ./magebench.py fetch-logs
-$ mv logs logs-wan-ot
+$ ./magebench.py fetch-logs logs-wan-ot
 $ ./magebench.py deallocate
 ```
+After running the `fetch-logs` command, you should see a local directory `logs-wan-ot` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: OT Parallelism** section. Make sure that the first cell assigns `wan_ot_directory` correctly (this should be `logs-wan-ot`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should show the running time decrease as the number of concurrent OTs increases.
+
+**There is no analogue to this graph in the paper, but with the shepherd's permission, I plan to add this graph to the paper in the camera-ready version.**
 
 WAN Experiments: Parallel Connections
 -------------------------------------
@@ -190,7 +196,9 @@ WAN Experiments: Parallel Connections
 $ ./magebench.py spawn -a 1 -g oregon iowa
 $ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 128 -c 1
 $ ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 128 -c 1
-$ ./magebench.py fetch-logs
-$ mv logs logs-wan-conn
+$ ./magebench.py fetch-logs logs-wan-conn
 $ ./magebench.py deallocate
 ```
+After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connectoins** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper.
+
+For this graph, you may see some variation compared to the ones in the OSDI paper because it depends on wide-area network conditions, which fluctuate over time.
