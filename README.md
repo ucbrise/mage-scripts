@@ -27,6 +27,7 @@ You should now see `(magebench-venv)` at the start of each terminal prompt, indi
 
 With the virtual environment active, install the requisite libraries in the virtual environment:
 ```
+$ sudo apt install pkg-config python3-gi python3-gi-cairo gir1.2-gtk-3.0 libcairo2-dev gcc python3-dev libgirepository1.0-dev
 $ pip3 install -r requirements.txt
 ```
 You only have to do this the _first_ time you use a virtual environment. If you close the terminal or run `deactivate` to stop using `magebench.py` temporarily, you do not have to re-run the above command when resuming experiments. You can just re-activate the virtual environment (`source ./magebench-venv/bin/activate`) and you'll be good to go.

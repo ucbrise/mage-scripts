@@ -9,8 +9,7 @@ import cluster
 
 SUBSCRIPTION_ID = "a8bdae60-f431-4620-bf0a-fad96eb36ca4"
 LOCATION = "westus2"
-IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps-v2"
-RESOURCE_GROUP = "MAGE-2"
+IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps-v3"
 
 credential = DefaultAzureCredential()
 
@@ -19,11 +18,11 @@ vnet_name = lambda cluster_name: cluster_name + "-vnet"
 nsg_name = lambda cluster_name: cluster_name + "-nsg"
 subnet_name = lambda cluster_name: cluster_name + "-subnet"
 vm_name = lambda cluster_name, instance_id: cluster_name + "-" +  str(instance_id)
-disk_name = lambda clsuter_name, instance_id: vm_name(cluster_name, instance_id) + "-disk"
+wdisk_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-wdisk"
 ip_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-ip"
 nic_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-nic"
 
-def spawn_cluster(c, name, count, subscription_id = SUBSCRIPTION_ID, location = LOCATION, image_id = IMAGE_ID):
+def spawn_cluster(c, name, count, use_large_work_disk = False, subscription_id = SUBSCRIPTION_ID, location = LOCATION, image_id = IMAGE_ID):
     with open("cloud-init.yaml", "rb") as f:
         cloud_init_bytes = f.read()
     cloud_init_encoded = base64.urlsafe_b64encode(cloud_init_bytes).decode("utf-8")
@@ -130,6 +129,18 @@ def spawn_cluster(c, name, count, subscription_id = SUBSCRIPTION_ID, location = 
         c.machines[id].azure_ip_configuration_id = nic_result.ip_configurations[0].id
         c.machines[id].private_ip_address = nic_result.ip_configurations[0].private_ip_address
 
+        data_disks = []
+        if use_large_work_disk:
+            data_disks.append({
+                "lun": 0,
+                "name": wdisk_name(name, id),
+                "create_option": "Empty",
+                "disk_size_gb": 8192, # Should be at tier S70
+                "managed_disk": {
+                    "storage_account_type": "Standard_LRS"
+                }
+            })
+
         poller = compute_client.virtual_machines.begin_create_or_update(resource_group, vm_name(name, id),
         {
             "location": location,
@@ -140,7 +151,8 @@ def spawn_cluster(c, name, count, subscription_id = SUBSCRIPTION_ID, location = 
             "storage_profile": {
                 "image_reference": {
                     "id": IMAGE_ID
-                }
+                },
+                "data_disks": data_disks
             },
             "os_profile": {
                 "computer_name": vm_name(name, id),

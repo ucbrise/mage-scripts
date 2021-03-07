@@ -16,7 +16,7 @@ def party_from_global_id(cluster, global_id):
 def clear_memory_caches(cluster, worker_ids):
     cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), worker_ids)
 
-def run_wan_experiment(cluster, problem_name, problem_size, scenario, location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
+def run_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"
     program_name = "{0}_{1}".format(problem_name, problem_size)
     config_file = "~/config-{0}/{1}/config_{2}_{3}_{4}_{5}.yaml".format(location, "1gb" if scenario == "mage" else "unbounded", protocol, workers_per_node, ot_pipeline_depth, ot_num_daemons)
@@ -57,14 +57,14 @@ def run_wan_experiment(cluster, problem_name, problem_size, scenario, location, 
         if party == 1:
             time.sleep(10 * workers_per_node + 20) # Wait for all evaluator workers to start first
         log_name_to_use = "{0}_w{1}".format(log_name, thread_id)
-        remote.exec_sync(machine.public_ip_address, "~/run_mage.sh {0} {1} {2} {3} {4} {5} {6} {7}".format(scenario, protocol, config_file, party, thread_id, program_name, log_name_to_use, "true"))
+        remote.exec_sync(machine.public_ip_address, "~/run_mage.sh {0} {1} {2} {3} {4} {5} {6} {7} {8}".format(scenario, mem_limit, protocol, config_file, party, thread_id, program_name, log_name_to_use, "true"))
 
     if protocol != "ckks":
         time.sleep(70) # Wait for TIME-WAIT state to expire
     clear_memory_caches(cluster, worker_ids)
     cluster.for_each_multiple_concurrently(run_mage, workers_per_node, worker_ids)
 
-def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, worker_ids, log_name = "/dev/null", workers_per_party = None, generate_fresh_input = True, generate_fresh_memprog = True):
+def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, mem_limit, worker_ids, log_name = "/dev/null", workers_per_party = None, generate_fresh_input = True, generate_fresh_memprog = True):
     if workers_per_party is None:
         if protocol == "halfgates":
             assert len(worker_ids) % 2 == 0
@@ -112,7 +112,7 @@ def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, 
         time.sleep(10 * local_id)
         if party == 1:
             time.sleep(10 * workers_per_party + 20) # Wait for all evaluator workers to start first
-        remote.exec_script(machine.public_ip_address, "./scripts/run_mage.sh", "{0} {1} {2} {3} {4} {5} {6} {7}".format(scenario, protocol, config_file, party, local_id, program_name, log_name, "true"))
+        remote.exec_script(machine.public_ip_address, "./scripts/run_mage.sh", "{0} {1} {2} {3} {4} {5} {6} {7} {8}".format(scenario, mem_limit, protocol, config_file, party, local_id, program_name, log_name, "true"))
 
     if protocol != "ckks":
         time.sleep(70) # Wait for TIME-WAIT state to expire

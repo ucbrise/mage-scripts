@@ -3,7 +3,7 @@ import cluster
 import azure_cloud
 import google_cloud
 
-def spawn_cluster(name, num_lan_machines, *wan_machine_locations):
+def spawn_cluster(name, num_lan_machines, use_large_work_disk, *wan_machine_locations):
     num_wan_machines = len(set(wan_machine_locations))
     if len(wan_machine_locations) != num_wan_machines:
         print("Some WAN locations are repeated")
@@ -28,7 +28,7 @@ def spawn_cluster(name, num_lan_machines, *wan_machine_locations):
     def init(_, id):
         if id == 0 and num_lan_machines > 0:
             # Initializes all machines from indices 0 to num_lan_machines - 1
-            azure_cloud.spawn_cluster(c, name, num_lan_machines)
+            azure_cloud.spawn_cluster(c, name, num_lan_machines, use_large_work_disk)
         elif id >= num_lan_machines:
             wan_index = id - num_lan_machines
             wan_location = wan_machine_locations[wan_index]

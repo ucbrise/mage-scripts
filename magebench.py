@@ -56,8 +56,13 @@ def spawn(args):
     assert args.azure_machine_count > 0
     if args.gcloud_machine_locations is None:
         args.gcloud_machine_locations = tuple()
+    elif args.large_work_disk:
+        print("Do NOT use \"large work disk\" in the WAN.")
+        print("The swapfile won't be on the temp disk anymore.")
+        print("This can be fixed by changing the code.")
+        sys.exit(1)
     print("Spawning cluster...")
-    c = cloud.spawn_cluster(args.name, args.azure_machine_count, *args.gcloud_machine_locations)
+    c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, *args.gcloud_machine_locations)
     c.save_to_file("cluster.json")
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
@@ -134,7 +139,7 @@ def run_lan(args):
             for scenario in args.scenarios:
                 num_workers_per_party = (len(c.machines) // 2) if args.workers is None else args.workers
                 log_name = "workers_{0}_{1}_{2}_{3}_t{4}".format(num_workers_per_party, problem_name, problem_size, scenario, trial)
-                experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name, args.workers)
+                experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers)
 
 def run_wan(args):
     c = cluster.Cluster.load_from_file("cluster.json")
@@ -163,7 +168,7 @@ def run_wan(args):
                         for ot_concurrency in args.ot_concurrency:
                             ot_pipeline_depth = max(ot_concurrency // (ot_num_daemons * workers_per_node), 1)
                             log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
-                            experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons)
+                            experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.mem_limit, args.location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons)
 
 def run_halfgates_baseline(args):
     if args.sizes is None:
@@ -260,6 +265,7 @@ if __name__ == "__main__":
     parser_spawn = subparsers.add_parser("spawn")
     parser_spawn.add_argument("-n", "--name", default = "mage-cluster")
     parser_spawn.add_argument("-a", "--azure-machine-count", type = int, default = 2)
+    parser_spawn.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
     parser_spawn.set_defaults(func = spawn)
 
@@ -277,6 +283,7 @@ if __name__ == "__main__":
     parser_run_lan = subparsers.add_parser("run-lan")
     parser_run_lan.add_argument("-p", "--programs", action = "extend", nargs = "+")
     parser_run_lan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
+    parser_run_lan.add_argument("-m", "--mem-limit", type=str, default = "1gb")
     parser_run_lan.add_argument("-t", "--trials", type = int, default = 1)
     parser_run_lan.add_argument("-w", "--workers", type = int)
     parser_run_lan.set_defaults(func = run_lan)
@@ -285,6 +292,7 @@ if __name__ == "__main__":
     parser_run_wan.add_argument("location", choices = ("oregon", "iowa"))
     parser_run_wan.add_argument("-p", "--programs", action = "extend", nargs = "+")
     parser_run_wan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
+    parser_run_wan.add_argument("-m", "--mem-limit", type=str, default = "1gb")
     parser_run_wan.add_argument("-t", "--trials", type = int, default = 1)
     parser_run_wan.add_argument("-w", "--workers-per-node", type = int, action = "extend", nargs = "+")
     parser_run_wan.add_argument("-o", "--ot-concurrency", type = int, action = "extend", nargs = "+")
@@ -310,6 +318,7 @@ if __name__ == "__main__":
     parser_purge = subparsers.add_parser("purge")
     parser_purge.add_argument("-n", "--name", default = "mage-cluster")
     parser_purge.add_argument("-a", "--azure-machine-count", type = int, default = 2)
+    parser_purge.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
     parser_purge.set_defaults(func = purge)
 

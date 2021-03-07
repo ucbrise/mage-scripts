@@ -21,9 +21,12 @@ def populate_top_level_params(protocol, scenario, split_factor, config, ot_pipel
     if protocol == "halfgates":
         config["page_shift"] = 12
         if scenario == "unbounded":
-            config["num_pages"] = 524288
-        elif scenario == "1gb":
-            config["num_pages"] = (16384 // split_factor) - 1536
+            config["num_pages"] = 1048576
+        elif scenario.endswith("gb"):
+            num_gb = int(scenario[:-2])
+            num_bytes = num_gb << 30
+            total_ideal_num_pages = num_bytes >> (config["page_shift"] + 4)
+            config["num_pages"] = (total_ideal_num_pages // split_factor) - 1536
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
         config["prefetch_buffer_size"] = 256
@@ -37,9 +40,12 @@ def populate_top_level_params(protocol, scenario, split_factor, config, ot_pipel
     elif protocol == "ckks":
         config["page_shift"] = 21
         if scenario == "unbounded":
-            config["num_pages"] = 16384
-        elif scenario == "1gb":
-            config["num_pages"] = (512 // split_factor) - 48
+            config["num_pages"] = 32768
+        elif scenario.endswith("gb"):
+            num_gb = int(scenario[:-2])
+            num_bytes = num_gb << 30
+            total_ideal_num_pages = num_bytes >> config["page_shift"]
+            config["num_pages"] = (total_ideal_num_pages // split_factor) - 48
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
         config["prefetch_buffer_size"] = 16
@@ -88,11 +94,10 @@ if __name__ == "__main__":
 
     creation_dir = sys.argv[4]
 
-    unbounded_dir = os.path.join(creation_dir, "unbounded")
-    bounded_dir = os.path.join(creation_dir, "1gb")
-
-    os.makedirs(unbounded_dir, exist_ok = True)
-    os.makedirs(bounded_dir, exist_ok = True)
+    memory_bounds = ("unbounded", "1gb", "2gb", "4gb", "8gb", "16gb", "32gb", "62gb")
+    dir_paths = tuple(os.path.join(creation_dir, mem_bound) for mem_bound in memory_bounds)
+    for dir in dir_paths:
+        os.makedirs(dir, exist_ok = True)
 
     if location == "lan" or location == "local":
         party_sizes = []
@@ -102,7 +107,7 @@ if __name__ == "__main__":
             party_size *= 2
 
         for protocol in ("halfgates", "ckks"):
-            for scenario, output_dir_path in (("unbounded", unbounded_dir), ("1gb", bounded_dir)):
+            for scenario, output_dir_path in zip(memory_bounds, dir_paths):
                 for party_size in party_sizes:
                     config_dict = generate_config_dict(protocol, scenario, party_size, id, cluster)
                     output_path = os.path.join(output_dir_path, "config_{0}_{1}.yaml".format(protocol, party_size))

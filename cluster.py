@@ -12,6 +12,7 @@ class Machine(object):
         self.vm_id = None
         self.vm_name = None
         self.disk_name = None
+        self.wdisk_name = None
         self.gcp_zone = None
         self.provider = None
 
@@ -22,14 +23,14 @@ class Machine(object):
     def from_dict(d):
         m = Machine()
         for attr in m.__dict__:
-            setattr(m, attr, d[attr])
+            setattr(m, attr, d.get(attr, None))
         return m
 
 class Cluster(object):
     def __init__(self, name, size):
         self.name = name
         self.azure_rg_id = None
-        self.azure_vnet_id = None
+        self.azure_vnet_idp= None
         self.azure_nsg_id = None
         self.azure_subnet_id = None
         self.machines = tuple(Machine() for _ in range(size))

@@ -3,11 +3,15 @@
 # This script should be run after a hard reboot of the machine. It sets up
 # the local disk and creates the cgroup afresh.
 
-CGROUP_NAME=memprog1gb
-
 if [[ $1 = "azure" ]]
 then
-    DISK_DEVICE=/dev/disk/cloud/azure_resource-part3
+    if [[ -e /dev/disk/azure/scsi1/lun0 ]]
+    then
+        DISK_DEVICE=/dev/disk/azure/scsi1/lun0
+        sudo mkfs.ext4 -q $DISK_DEVICE
+    else
+        DISK_DEVICE=/dev/disk/cloud/azure_resource-part3
+    fi
 elif [[ $1 = "gcloud" ]]
 then
     DISK_DEVICE=/dev/nvme0n1p3
@@ -38,5 +42,9 @@ cp -r /opt/* ~/work
 
 mkdir -p ~/logs
 
-sudo cgcreate -g memory:${CGROUP_NAME}
-echo 1G | sudo tee /sys/fs/cgroup/memory/${CGROUP_NAME}/memory.limit_in_bytes
+for memsize in 1g 2g 4g 8g 16g 32g 62g
+do
+    cgroup_name=memprog${memsize}b
+    sudo cgcreate -g memory:${cgroup_name}
+    echo $memsize | sudo tee /sys/fs/cgroup/memory/${cgroup_name}/memory.limit_in_bytes
+done

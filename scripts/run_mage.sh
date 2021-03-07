@@ -3,17 +3,18 @@
 set -x
 
 SCENARIO=$1
-PROTOCOL=$2
-CONFIG=$3
-PARTY=$4
-WORKER=$5
-PROGRAM=$6
-LOG_NAME=$7
-CHECK_RESULT=$8
+LIMIT=$2
+PROTOCOL=$3
+CONFIG=$4
+PARTY=$5
+WORKER=$6
+PROGRAM=$7
+LOG_NAME=$8
+CHECK_RESULT=$9
 
 if [[ -z $CHECK_RESULT ]]
 then
-	echo "Usage:" $0 "scenario protocol config party_id worker_id program_name log_file_name check_result[true/false]"
+	echo "Usage:" $0 "scenario limit protocol config party_id worker_id program_name log_file_name check_result[true/false]"
 	exit
 fi
 
@@ -23,7 +24,7 @@ PREFIX=
 if [[ $SCENARIO = "mage" ]]
 then
 	sudo swapoff -a
-	PREFIX="sudo cgexec -g memory:memprog1gb"
+	PREFIX="sudo cgexec -g memory:memprog${LIMIT}"
 elif [[ $SCENARIO = "unbounded" ]]
 then
 	sudo swapoff -a
@@ -32,7 +33,7 @@ elif [[ $SCENARIO = "os" ]]
 then
 	sudo swapoff -a
 	sudo swapon /dev/disk/cloud/azure_resource-part2
-	PREFIX="sudo cgexec -g memory:memprog1gb"
+	PREFIX="sudo cgexec -g memory:memprog${LIMIT}"
 else
 	echo "Unknown scenario" $SCENARIO
 	exit 2
