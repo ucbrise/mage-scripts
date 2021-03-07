@@ -8,7 +8,12 @@ You will need a system that runs Python 3 to run this tool. This system serves a
 
 Once you have chosen the machine, you must install the tool. It is recommended that you use a virtual environment, so that you can install the correct versions of the requisite Python libraries without affecting the system's Python configuration.
 
-First, clone this repository and `cd` into it:
+First, install the prerequisites. The following command works on an Ubuntu 20.04 machine:
+```
+$ sudo apt install python3-venv python3-pip pkg-config python3-gi python3-gi-cairo gir1.2-gtk-3.0 libcairo2-dev gcc python3-dev libgirepository1.0-dev
+```
+
+Then, clone this repository and `cd` into it:
 ```
 $ git clone https://github.com/ucbrise/mage-scripts
 $ cd mage-scripts
@@ -27,7 +32,6 @@ You should now see `(magebench-venv)` at the start of each terminal prompt, indi
 
 With the virtual environment active, install the requisite libraries in the virtual environment:
 ```
-$ sudo apt install pkg-config python3-gi python3-gi-cairo gir1.2-gtk-3.0 libcairo2-dev gcc python3-dev libgirepository1.0-dev
 $ pip3 install -r requirements.txt
 ```
 You only have to do this the _first_ time you use a virtual environment. If you close the terminal or run `deactivate` to stop using `magebench.py` temporarily, you do not have to re-run the above command when resuming experiments. You can just re-activate the virtual environment (`source ./magebench-venv/bin/activate`) and you'll be good to go.
