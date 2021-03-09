@@ -57,11 +57,12 @@ then
 		fi
 	elif [[ $PROTOCOL = "ckks" ]]
 	then
+		rm ${PROGRAM}_${WORKER}_garbler.input
 		./ckks_utils decrypt_file 1 ${PROGRAM}_${WORKER}.output
 		./ckks_utils float_file_decode ${PROGRAM}_${WORKER}.output > decoded.output
 		./ckks_utils float_file_decode ${PROGRAM}_${WORKER}.expected > expected.output
 		diff decoded.output expected.output > ~/logs/${LOG_NAME}.result
-		rm ${PROGRAM}_${WORKER}_garbler.input
+		rm ${PROGRAM}_${WORKER}.output.ciphertext
 	else
 		echo "Unknown protocol" $PROTOCOL
 	fi
