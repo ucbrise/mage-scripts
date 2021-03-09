@@ -61,6 +61,7 @@ then
 		./ckks_utils float_file_decode ${PROGRAM}_${WORKER}.output > decoded.output
 		./ckks_utils float_file_decode ${PROGRAM}_${WORKER}.expected > expected.output
 		diff decoded.output expected.output > ~/logs/${LOG_NAME}.result
+		rm ${PROGRAM}_${WORKER}_garbler.input
 	else
 		echo "Unknown protocol" $PROTOCOL
 	fi
