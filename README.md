@@ -2,8 +2,32 @@ Benchmarking Scripts for MAGE
 =============================
 This repository contains a tool for benchmarking the MAGE system. The benchmarks are run primarily on Microsoft Azure (with some wide-area network experiments also using Google Cloud). The `magebench.py` tool allows one to spawn a virtual machines in the cloud, run benchmarks for MAGE using those virtual machines, collect log files containing the results of the benchmarks, and then deallocate those virtual machines. An IPython notebook, `graphs.ipynb` allows one to produce graphs based on the results, similar to the ones in the OSDI paper.
 
-Setting up `magebench.py` (15 human-minutes)
+Setting Up `magebench.py` (15 human-minutes)
 --------------------------------------------
+
+### Instructions for OSDI 2021 Artifact Evaluation
+
+Welcome OSDI 2021 artifact reviewers! We are providing cloud virtual machines with the prerequisites for `magebench.py` pre-installed. Instructions for accessing these virtual machines are available on the private README file included in our artifact submission. Pay particular attention to the instructions on "claiming" an instance so that each reviewer gets their own cloud instance to run `magebench.py`.
+
+#### Using the Cloud Instances
+
+The instances we provide for running `magebench.py` are relatively cheap, so we'll leave them running for the duration of the artifact evaluation process. In contrast, the instances that you'll spawn using `magebench.py` are quite expensive, so you **should** make sure to deallocate them once you're done using them (see below for instructions on how to do this). Credentials for `magebench.py` to use our provided funding to access Microsoft Azure and Google Cloud are provided in the cloud instances themselves. If you prefer to use a computer other than our provided cloud virtual machines to run `magebench.py`, then contact us and we'll provide you with the credentials separately.
+
+Once you access one of our provided instance, you should run `cd mage-scripts`. Then, you can run `./magebench.py` from there. To make things as easy as possible, our provided instances do not use a virtual environment for Python, and the necessary credentials for Microsoft Azure and Google Cloud are loaded automatically into environment variables (see `~/.profile` if you're interested). So running `./magebench.py` from the `mage-scripts` directory should just work.
+
+#### Using `tmux`
+
+Some of the experiments take several hours to run, so we recommend running `./magebench.py` from within a `tmux` session. Then, you can detach from the `tmux` session and disconnect from the cloud instance, while allowing `magebench.py` to keep running. This will prevent you from losing partial progress if there is a disruption in your internet service that prevents you from remaining SSH'd into the instance continuously for several hours.
+
+If you aren't familiar with `tmux`, you can experiment with it by running a long-running command like `sleep 100`. You can do so by running the following commands:
+1. First, run `tmux` to create a new terminal session.
+2. Second, run `sleep 100`.
+3. While the command is running, type `Ctrl-B`, and then press the `D` key.
+4. You should now be detached from the `tmux` session. You can do anything you want from the original session, including disconnect and reconnect to the machine.
+5. Run `tmux attach -t 0` to reattach to the `tmux` session. Observe that `sleep 100` is still running.
+
+### Instructions for Setting Up `magebench.py` On Your Own System
+
 You will need a system that runs Python 3 to run this tool. This system serves as the "master" node that coordinates the benchmarks. It must remain connected to the Internet with a stable IP address for the duration of each experiment. Some of these experiments may take up to 24 hours to complete. If you can keep your laptop running with a stable Internet connection for that long (without going to standby sleep), then you can install and run this tool on your laptop. If not, you should use a server that has a stable Internet connection and run the tool on that machine.
 
 Once you have chosen the machine, you must install the tool. It is recommended that you use a virtual environment, so that you can install the correct versions of the requisite Python libraries without affecting the system's Python configuration.
@@ -36,7 +60,7 @@ $ pip3 install -r requirements.txt
 ```
 You only have to do this the _first_ time you use a virtual environment. If you close the terminal or run `deactivate` to stop using `magebench.py` temporarily, you do not have to re-run the above command when resuming experiments. You can just re-activate the virtual environment (`source ./magebench-venv/bin/activate`) and you'll be good to go.
 
-The `magebench.py` program will attempt to allocate cloud resources using Microsoft Azure and Google Cloud. For this to work, you need to set the appropriate environment variables so that `magebench.py` can authenticate to Microsoft Azure and Google Cloud. You should set the environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` to interact with Microsoft Azure, and `GOOGLE_APPLICATION_CREDENTIALS` to interact with Google Cloud. If you are a reviewer for OSDI Artifact Evaluation, you should have received authentication tokens that you can use for this step. Otherwise, you will need to set up users/apps linked to billing accounts for Microsoft Azure and Google Cloud to pay for the resources used.
+The `magebench.py` program will attempt to allocate cloud resources using Microsoft Azure and Google Cloud. For this to work, you need to set the appropriate environment variables so that `magebench.py` can authenticate to Microsoft Azure and Google Cloud. You should set the environment variables `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, and `AZURE_CLIENT_SECRET` to interact with Microsoft Azure, and `GOOGLE_APPLICATION_CREDENTIALS` to interact with Google Cloud. If you are a reviewer for OSDI Artifact Evaluation, you can obtain suitable credentials by looking at `~/setup_credentials.sh` in the provided cloud VM for running `magebench.py`. Otherwise, you will need to set up users/apps linked to billing accounts for Microsoft Azure and Google Cloud to pay for the resources used.
 
 Finally, you can run:
 ```
@@ -142,7 +166,7 @@ Now that you have the log files locally, let's draw a graph representing our dat
 
 Run `jupyter notebook` to start an IPython notebook. A web page (probably hosted on `localhost:8888`) should open up. Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next two cells, ensuring that the variable `simple_guided_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran.
 
-**Optional:** Most of the work in the guided example was in the commands of the form `$ ./magebench.py run-lan ...`. If you'd like to see exactly what this command does, see another tutorial here: TODO.
+**Optional:** Most of the work in the guided example was in the commands of the form `$ ./magebench.py run-lan ...`. If you'd like to see what this command does, then work through the tutorial on the [[https://github.com/ucbrise/mage/wiki|MAGE wiki]].
 
 Baseline: Comparison to Existing Frameworks
 -------------------------------------------

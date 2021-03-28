@@ -2,6 +2,7 @@
 import argparse
 import os
 import shutil
+import socket
 import sys
 import time
 
@@ -61,6 +62,8 @@ def spawn(args):
         print("The swapfile won't be on the temp disk anymore.")
         print("This can be fixed by changing the code.")
         sys.exit(1)
+    if args.name == "":
+        args.name = "mage-{0}".format(socket.gethostname())
     print("Spawning cluster...")
     c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, *args.gcloud_machine_locations)
     c.save_to_file("cluster.json")
@@ -228,6 +231,8 @@ def purge(args):
     print("Purging cluster...")
     if args.gcloud_machine_locations is None:
         args.gcloud_machine_locations = tuple()
+    if args.name == "":
+        args.name = "mage-{0}".format(socket.gethostname())
     cloud.deallocate_cluster_by_info(args.name, *args.gcloud_machine_locations)
     try:
         os.remove("cluster.json")
@@ -263,7 +268,7 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers()
 
     parser_spawn = subparsers.add_parser("spawn")
-    parser_spawn.add_argument("-n", "--name", default = "mage-cluster")
+    parser_spawn.add_argument("-n", "--name", default = "")
     parser_spawn.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_spawn.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
@@ -316,7 +321,7 @@ if __name__ == "__main__":
     parser_deallocate.set_defaults(func = deallocate)
 
     parser_purge = subparsers.add_parser("purge")
-    parser_purge.add_argument("-n", "--name", default = "mage-cluster")
+    parser_purge.add_argument("-n", "--name", default = "")
     parser_purge.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_purge.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
@@ -327,4 +332,8 @@ if __name__ == "__main__":
     parser_fetch_logs.set_defaults(func = fetch_logs)
 
     args = parser.parse_args()
-    args.func(args)
+    if hasattr(args, 'func'):
+        args.func(args)
+    else:
+        print("Nothing to do!")
+        print("Try: {0} -h".format(sys.argv[0]))
