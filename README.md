@@ -158,15 +158,23 @@ This will take significantly longer to run because (1) it is running 2 experimen
 
 Finally, run:
 ```
-$ ./magebench.py fetch-logs logs-simple-guided
+$ ./magebench.py fetch-logs logs-workloads-2
 ```
-This copies the log files, which includes how long the total execution took, to the local machine. You can find the files locally, in `logs-simple/00` (for the garbler) and `logs-simple/01` (for the evaluator). The files that end in `.log` correspond to the actual execution, and the files that end in `.planning` correspond to MAGE's planning phase. The last line of each `.log` file says how long the experiment took. There are two `.log` files because the garbler and evaluator independently measure how long the execution took.
+This copies the log files, which includes how long the total execution took, to the local machine. You can find the files locally, in `logs-workloads-2/00` (for the garbler) and `logs-workloads-2/01` (for the evaluator). The files that end in `.log` correspond to the actual execution, and the files that end in `.planning` correspond to MAGE's planning phase. The last line of each `.log` file says how long the experiment took. There are two `.log` files per experiment (one in `00` and another in `01`) because the garbler and evaluator independently measure how long the execution took.
 
 Now that you have the log files locally, let's draw a graph representing our data. We have three data points (for each of the three scenarios), so we'll draw a bar graph showing all three data points.
 
-Run `jupyter notebook` to start an IPython notebook. A web page (probably hosted on `localhost:8888`) should open up. Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next two cells, ensuring that the variable `simple_guided_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran.
+Run `jupyter notebook` to start an IPython notebook. A web page (probably hosted on `localhost:8888`) should open up. Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next four cells, ensuring that the variable `simple_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran.
 
-**Optional:** Most of the work in the guided example was in the commands of the form `$ ./magebench.py run-lan ...`. If you'd like to see what this command does, then work through the tutorial on the [[https://github.com/ucbrise/mage/wiki|MAGE wiki]].
+In a later section of this document, you will populate `logs-workloads-2` with the results of more experiments.
+
+**Optional:** Most of the work in the guided example was in the commands of the form `$ ./magebench.py run-lan ...`. If you'd like to see what this command does, then work through the tutorial on the [MAGE wiki](https://github.com/ucbrise/mage/wiki).
+
+Running the Experiments
+-----------------------
+The following subsections discuss how to use the `./magebench.py` script to reproduce the experiments. Each subsection below discusses reproducing a single graph or group of graphs. Each one will involve a fair bit of waiting to wait for the benchmarks to run and the results to become available.
+
+If you'd rather do all of the waiting up front, you can run `./run_all_experiments.sh`. It will run all of the benchmarks described below. It will take about 24 hours to run, so you'll probably want to use `tmux` as described above. Once this completes, you can skip all of the commands in each of the subsections below (and all of the waiting for experiments to complete) and then just generate the graphs.
 
 Baseline: Comparison to Existing Frameworks
 -------------------------------------------
@@ -228,6 +236,6 @@ $ ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 
 $ ./magebench.py fetch-logs logs-wan-conn
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connectoins** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper.
+After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connections** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper.
 
 For this graph, you may see some variation compared to the ones in the OSDI paper because it depends on wide-area network conditions, which fluctuate over time.
