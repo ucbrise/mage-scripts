@@ -121,6 +121,7 @@ $ python3 -m json.tool cluster.json
     }
 }
 ```
+You can SSH manually into one of the instances by running `ssh -i mage mage@40.91.121.173` (where you would change the IP address according to your personal `cluster.json` file). You won't need to do that to use `magebench.py`, but you may find it useful to that if you want to do your own experimentation with MAGE using the Azure machines as a build environment (e.g., when following the tutorial in the [MAGE wiki](https://github.com/ucbrise/mage/wiki)).
 
 If you want to take a break, or if you're done for the day, you should deallocate the cluster's resources by running:
 ```
