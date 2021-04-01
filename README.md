@@ -32,9 +32,14 @@ You will need a system that runs Python 3 to run this tool. This system serves a
 
 Once you have chosen the machine, you must install the tool. It is recommended that you use a virtual environment, so that you can install the correct versions of the requisite Python libraries without affecting the system's Python configuration.
 
-First, install the prerequisites. The following command works on an Ubuntu 20.04 machine:
+First, install the prerequisites for `magebench.py`. The following command works on an Ubuntu 20.04 machine:
 ```
 $ sudo apt install python3-venv python3-pip pkg-config python3-gi python3-gi-cairo gir1.2-gtk-3.0 libcairo2-dev gcc python3-dev libgirepository1.0-dev
+```
+
+Second, install the prerequisites for generating graphs using our IPython notebook:
+```
+$ sudo apt install jupyter-core jupyter python3-matplotlib
 ```
 
 Then, clone this repository and `cd` into it:
@@ -165,7 +170,9 @@ This copies the log files, which includes how long the total execution took, to 
 
 Now that you have the log files locally, let's draw a graph representing our data. We have three data points (for each of the three scenarios), so we'll draw a bar graph showing all three data points.
 
-Run `jupyter notebook` to start an IPython notebook. A web page (probably hosted on `localhost:8888`) should open up. Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next four cells, ensuring that the variable `simple_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran.
+Run `jupyter notebook` to start an IPython notebook. A web page (probably hosted on `localhost:8888`) should open up. If you are running this on a remote server, you will see a line printed out in the terminal with a URL including a token; you'll need to change the IP address to the server's global IP address to access the notebook. For example, if the URL is `http://127.0.0.1:8888/?token=5b079c3e2b641555b7deb700908444e5f2c649d1a6b52925`, you should change `127.0.0.1` to the public IP address of the server, and then navigate your web browser to that URL.
+
+Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next four cells, ensuring that the variable `simple_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran.
 
 In a later section of this document, you will populate `logs-workloads-2` with the results of more experiments.
 
@@ -177,7 +184,7 @@ The following subsections discuss how to use the `./magebench.py` script to repr
 
 If you'd rather do all of the waiting up front, you can run `./run_all_experiments.sh`. It will run all of the benchmarks described below. It will take about 24 hours to run, so you'll probably want to use `tmux` as described above. Once this completes, you can skip all of the commands in each of the subsections below (and all of the waiting for experiments to complete) and then just generate the graphs.
 
-Baseline: Comparison to Existing Frameworks
+Baseline: Comparison to Existing Frameworks (5 minutes working, 1 hour waiting)
 -------------------------------------------
 Run the following commands:
 ```
@@ -189,7 +196,7 @@ $ ./magebench.py deallocate
 ```
 After running the `fetch-logs` command, you should see a local directory `logs-baseline` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Baseline Experiments** section. Make sure that the first cell assigns `baseline_directory` correctly (this should be `logs-baseline`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graphs should be similar to Figures 6 and 7 in the paper.
 
-Ten Workloads: One Worker Per Party
+Ten Workloads: One Worker Per Party (5 minutes working, 10 hours waiting)
 -----------------------------------
 Run the following commands:
 ```
@@ -202,7 +209,7 @@ After running the `fetch-logs` command, you should see a local directory `logs-w
 
 The graph given in the paper was produced form 8 trials for each experiment, on different instances. The graph in the IPython notebook is produced using only one trial, so no error bars are present, and some variation should be expected. In particular, the error bars in the paper depict the quartiles, so there is about a 50% chance that the results obtained by running the above command will be within the error bars. My qualitative observation is that the deviation from the median appears consistent for each machine. In other words, if one workload runs more slowly (respectively, quickly) than the median on one machine or pair of machines, the remaining workloads are also likely to run more slowly (respectively, quickly) on that machine or pair of machines.
 
-Ten Workloads: Four Workers Per Party
+Ten Workloads: Four Workers Per Party (5 minutes working, 20 hours waiting)
 -------------------------------------
 Run the following commands:
 ```
@@ -215,7 +222,7 @@ After running the `fetch-logs` command, you should see a local directory `logs-w
 
 No error bars are presented in the paper, so some variation should be expected. Just as in the previous figure, all of the workloads are likely to deviate from those in the paper in the same direction.
 
-WAN Experiments: Parallel OTs (5 minutes working, 24 hours waiting)
+WAN Experiments: Parallel OTs (5 minutes working, 3 hours hours waiting)
 -----------------------------
 Run the following commands:
 ```
@@ -228,7 +235,7 @@ After running the `fetch-logs` command, you should see a local directory `logs-w
 
 **There is no analogue to this graph in the paper, but with the shepherd's permission, I plan to add this graph to the paper in the camera-ready version.**
 
-WAN Experiments: Parallel Connections
+WAN Experiments: Parallel Connections (5 minutes working, 3 hours waiting)
 -------------------------------------
 ```
 $ ./magebench.py spawn -a 1 -g oregon iowa

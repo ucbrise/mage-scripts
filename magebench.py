@@ -115,7 +115,7 @@ def run_single(args):
         log_name = "{0}_{1}".format(args.label, log_name)
     if args.tag is not None:
         log_name += "_{0}".format(args.tag)
-    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name, args.workers)
+    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers)
 
 def run_lan(args):
     c = cluster.Cluster.load_from_file("cluster.json")
@@ -193,7 +193,7 @@ def run_halfgates_baseline(args):
                 if scenario == "emp":
                     experiment.run_halfgates_baseline_experiment(c, problem_size, "os", worker_ids, log_name)
                 else:
-                    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name)
+                    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name)
 
 def run_ckks_baseline(args):
     if args.sizes is None:
@@ -215,7 +215,7 @@ def run_ckks_baseline(args):
                 if scenario == "seal":
                     experiment.run_ckks_baseline_experiment(c, problem_size, "os", worker_ids, log_name)
                 else:
-                    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, worker_ids, log_name)
+                    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name)
 
 def deallocate(args):
     print("Deallocating cluster...")
@@ -282,6 +282,7 @@ if __name__ == "__main__":
     parser_run.add_argument("scenario")
     parser_run.add_argument("-l", "--label")
     parser_run.add_argument("-g", "--tag")
+    parser_run.add_argument("-m", "--mem-limit", type=str, default = "1gb")
     parser_run.add_argument("-w", "--workers", type = int)
     parser_run.set_defaults(func = run_single)
 
@@ -307,12 +308,14 @@ if __name__ == "__main__":
     parser_run_hgb = subparsers.add_parser("run-halfgates-baseline")
     parser_run_hgb.add_argument("-z", "--sizes", action = "extend", nargs = "+", type = int)
     parser_run_hgb.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os", "emp"))
+    parser_run_hgb.add_argument("-m", "--mem-limit", type=str, default = "1gb")
     parser_run_hgb.add_argument("-t", "--trials", type = int, default = 1)
     parser_run_hgb.set_defaults(func = run_halfgates_baseline)
 
     parser_run_ckb = subparsers.add_parser("run-ckks-baseline")
     parser_run_ckb.add_argument("-z", "--sizes", action = "extend", nargs = "+", type = int)
     parser_run_ckb.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os", "seal"))
+    parser_run_ckb.add_argument("-m", "--mem-limit", type=str, default = "1gb")
     parser_run_ckb.add_argument("-t", "--trials", type = int, default = 1)
     parser_run_ckb.set_defaults(func = run_ckks_baseline)
 
