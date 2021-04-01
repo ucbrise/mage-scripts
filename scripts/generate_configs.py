@@ -116,7 +116,7 @@ if __name__ == "__main__":
     else:
         azure_id = id
         gcloud_id = cluster["location_to_id"][location]
-        for scenario, output_dir_path in (("unbounded", unbounded_dir), ("1gb", bounded_dir)):
+        for scenario, output_dir_path in zip(memory_bounds, dir_paths):
             for party_size in (1, 2, 4, 8, 16):
                 for ot_pipeline_depth in tuple(2 ** i for i in range(9)):
                     for ot_num_daemons in tuple(2 ** i for i in range(9)):

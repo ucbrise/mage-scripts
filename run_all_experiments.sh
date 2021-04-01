@@ -7,6 +7,7 @@ baseline_start=$(date +%s)
 ./magebench.py fetch-logs logs-baseline
 ./magebench.py deallocate
 baseline_end=$(date +%s)
+echo "Baseline:" $(expr $baseline_end - $baseline_start) | tee baseline_time
 
 ten_single_start=$(date +%s)
 ./magebench.py spawn -a 2
@@ -14,6 +15,7 @@ ten_single_start=$(date +%s)
 ./magebench.py fetch-logs logs-workloads-2
 ./magebench.py deallocate
 ten_single_end=$(date +%s)
+echo "Ten Single:" $(expr $ten_single_end - $ten_single_start) | tee ten_single_time
 
 ten_parallel_start=$(date +%s)
 ./magebench.py spawn -a 8
@@ -21,13 +23,7 @@ ten_parallel_start=$(date +%s)
 ./magebench.py fetch-logs logs-workloads-8
 ./magebench.py deallocate
 ten_parallel_end=$(date +%s)
-
-wan_ot_start=$(date +%s)
-./magebench.py spawn -a 1 -g oregon
-./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 -o 2 4 8 16 32 64 128 256 -c 2
-./magebench.py fetch-logs logs-wan-ot
-./magebench.py deallocate
-wan_ot_end=$(date +%s)
+echo "Ten Parallel:" $(expr $ten_parallel_end - $ten_parallel_start) | tee ten_parallel_time
 
 wan_conn_start=$(date +%s)
 ./magebench.py spawn -a 1 -g oregon iowa
@@ -36,9 +32,12 @@ wan_conn_start=$(date +%s)
 ./magebench.py fetch-logs logs-wan-conn
 ./magebench.py deallocate
 wan_conn_end=$(date +%s)
+echo "WAN Conn:" $(expr $wan_conn_end - $wan_conn_start) | tee wan_conn_time
 
-echo "Baseline:" $(expr $baseline_end - $baseline_start)
-echo "Ten Single:" $(expr $ten_single_end - $ten_single_start)
-echo "Ten Parallel:" $(expr $ten_parallel_end - $ten_parallel_start)
-echo "WAN OT:" $(expr $wan_ot_end - $wan_ot_start)
-echo "WAN Conn:" $(expr $wan_conn_end - $wan_conn_start)
+wan_ot_start=$(date +%s)
+./magebench.py spawn -a 1 -g oregon
+./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 -o 2 4 8 16 32 64 128 256 -c 2
+./magebench.py fetch-logs logs-wan-ot
+./magebench.py deallocate
+wan_ot_end=$(date +%s)
+echo "WAN OT:" $(expr $wan_ot_end - $wan_ot_start) | tee wan_ot_time
