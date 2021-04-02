@@ -9,7 +9,7 @@ import cluster
 
 SUBSCRIPTION_ID = "a8bdae60-f431-4620-bf0a-fad96eb36ca4"
 LOCATION = "westus2"
-IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps-v5"
+IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps-v7"
 
 credential = DefaultAzureCredential()
 

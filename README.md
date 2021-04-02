@@ -2,6 +2,8 @@ Benchmarking Scripts for MAGE
 =============================
 This repository contains a tool for benchmarking the MAGE system. The benchmarks are run primarily on Microsoft Azure (with some wide-area network experiments also using Google Cloud). The `magebench.py` tool allows one to spawn a virtual machines in the cloud, run benchmarks for MAGE using those virtual machines, collect log files containing the results of the benchmarks, and then deallocate those virtual machines. An IPython notebook, `graphs.ipynb` allows one to produce graphs based on the results, similar to the ones in the OSDI paper. This document contains instructions for reproducing the graphs in the submitted paper only. We *might* add additional graphs to the paper based on feedback in the reviews, but we haven't made those graphs yet, so we don't have scripts to produce them.
 
+**Note: In aggregate, the benchmarks below take about two full days (almost 48 hours) to run.**
+
 Setting Up `magebench.py` (15 minutes working)
 ----------------------------------------------
 
@@ -160,7 +162,7 @@ The `magebench.py` script also allows you to run multiple experiments with a sin
 ```
 $ ./magebench.py run-lan -t 1 -s os unbounded -p merge_sorted_1048576
 ```
-This will take significantly longer to run because (1) it is running 2 experiments, and (2) the OS scenario takes much longer than the MAGE and Unbounded setups.
+This will take significantly longer to run because (1) it is running 2 experiments, one after the other, and (2) the OS scenario takes much longer than the MAGE and Unbounded setups. Note that `magebench.py` allows running multiple scenarios in a single command.
 
 Finally, run:
 ```
@@ -170,21 +172,25 @@ This copies the log files, which includes how long the total execution took, to 
 
 Now that you have the log files locally, let's draw a graph representing our data. We have three data points (for each of the three scenarios), so we'll draw a bar graph showing all three data points.
 
-Run `jupyter notebook` to start an IPython notebook. A web page (probably hosted on `localhost:8888`) should open up. If you are running this on a remote server, you will see a line printed out in the terminal with a URL including a token; you'll need to change the IP address to the server's global IP address to access the notebook. For example, if the URL is `http://127.0.0.1:8888/?token=5b079c3e2b641555b7deb700908444e5f2c649d1a6b52925`, you should change `127.0.0.1` to the public IP address of the server, and then navigate your web browser to that URL.
+Run `jupyter notebook` to start an IPython notebook. If you're running this locally (e.g., on your laptop), your web browser should open, displaying a web page (probably hosted on `localhost:8888`). If you are running this on a remote server, you'll need to configure Jupyter to serve globally. If you are an OSDI Artiface Evaluator using one of our provided cloud instances, then everything should be pre-configured; you can just go to `http://<IP Address>:8888` and enter the password provided in the private README file.
 
-Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next four cells, ensuring that the variable `simple_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran.
+Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next four cells, ensuring that the variable `simple_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran. It should look similar to this:
+
+![Example output for the simple, guided example](figures/simple.svg)
+
+Note that the MAGE and Unbounded scenarios take about the same time to run, but the OS scenario takes significantly longer.
 
 In a later section of this document, you will populate `logs-workloads-2` with the results of more experiments.
 
-**Optional:** Most of the work in the guided example was in the commands of the form `$ ./magebench.py run-lan ...`. If you'd like to see what this command does, then work through the tutorial on the [MAGE wiki](https://github.com/ucbrise/mage/wiki).
+**Optional:** Most of the work in the guided example was in the commands of the form `$ ./magebench.py run-lan ...`. If you'd like to see how to use `mage` directly, then work through the tutorial on the [MAGE wiki](https://github.com/ucbrise/mage/wiki).
 
 Running the Experiments
 -----------------------
 The following subsections discuss how to use the `./magebench.py` script to reproduce the experiments. Each subsection below discusses reproducing a single graph or group of graphs. Each one will involve a fair bit of waiting to wait for the benchmarks to run and the results to become available.
 
-If you'd rather do all of the waiting up front, you can run `./run_all_experiments.sh`. It will run all of the benchmarks described below. It will take about 24 hours to run, so you'll probably want to use `tmux` as described above. Once this completes, you can skip all of the commands in each of the subsections below (and all of the waiting for experiments to complete) and then just generate the graphs.
+If you'd rather do all of the waiting up front, you can run `./run_all_experiments.sh`. It will run all of the benchmarks described below. It will take about two full days (almost 48 hours) to run, so you'll probably want to use `tmux` as described above. Once this completes, you can skip all of the commands in each of the subsections below (and all of the waiting for experiments to complete) and then just generate the graphs in the IPython notebook.
 
-Baseline: Comparison to Existing Frameworks (5 minutes working, 4 hours waiting)
+Baseline: Comparison to Existing Frameworks (5 minutes working, 4-5 hours waiting)
 --------------------------------------------------------------------------------
 Run the following commands:
 ```
@@ -194,36 +200,48 @@ $ ./magebench.py run-ckks-baseline -t 1 -s os unbounded mage seal -z 64 128 256 
 $ ./magebench.py fetch-logs logs-baseline
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-baseline` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Baseline Experiments** section. Make sure that the first cell assigns `baseline_directory` correctly (this should be `logs-baseline`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graphs should be similar to Figures 6 and 7 in the paper.
+After running the `fetch-logs` command, you should see a local directory `logs-baseline` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Baseline Experiments** section. Make sure that the first cell assigns `baseline_directory` correctly (this should be `logs-baseline`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graphs should be similar to Figures 6 and 7 in the paper:
+
+![First graph in Figure 6 from the OSDI 2021 paper](figures/emp_baseline_zoomed.svg)
+![Second graph in Figure 6 from the OSDI 2021 paper](figures/emp_baseline.svg)
+
+![First graph in Figure 7 from the OSDI 2021 paper](figures/seal_baseline_zoomed.svg)
+![Second graph in Figure 7 from the OSDI 2021 paper](figures/seal_baseline.svg)
 
 Ten Workloads: One Worker Per Party (5 minutes working, 10 hours waiting)
 -------------------------------------------------------------------------
 Run the following commands:
 ```
 $ ./magebench.py spawn -a 2
-$ ./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_matrix_multiply_128 -s unbounded mage os -t 1 -w 1
+$ ./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -w 1
 $ ./magebench.py fetch-logs logs-workloads-2
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-workloads-2` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Single-Node Experiments** section. Make sure that the first cell assigns `single_node_directory` correctly (this should be `logs-workloads-2`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 8 in the paper.
+After running the `fetch-logs` command, you should see a local directory `logs-workloads-2` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **Single-Node Experiments** section. Make sure that the first cell assigns `single_node_directory` correctly (this should be `logs-workloads-2`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 8 in the paper:
+
+![Figure 8 from the OSDI 2021 paper](figures/workloads_single.svg)
 
 The graph given in the paper was produced form 8 trials for each experiment, on different instances. The graph in the IPython notebook is produced using only one trial, so no error bars are present, and some variation should be expected. In particular, the error bars in the paper depict the quartiles, so there is about a 50% chance that the results obtained by running the above command will be within the error bars. My qualitative observation is that the deviation from the median appears consistent for each machine. In other words, if one workload runs more slowly (respectively, quickly) than the median on one machine or pair of machines, the remaining workloads are also likely to run more slowly (respectively, quickly) on that machine or pair of machines.
+
+The IPython notebook also prints out measurements corresponding to Tables 1 and 2 in the paper.
 
 Ten Workloads: Four Workers Per Party (5 minutes working, 20 hours waiting)
 ---------------------------------------------------------------------------
 Run the following commands:
 ```
 $ ./magebench.py spawn -a 8
-$ ./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_matrix_multiply_256 -s unbounded mage os -t 1 -w 4
+$ ./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -w 4
 $ ./magebench.py fetch-logs logs-workloads-8
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-workloads-8` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **p = 4 Parallelism Experiments** section. Make sure that the first cell assigns `multi_node_directory` correctly (this should be `logs-workloads-8`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 9 in the paper.
+After running the `fetch-logs` command, you should see a local directory `logs-workloads-8` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **p = 4 Parallelism Experiments** section. Make sure that the first cell assigns `multi_node_directory` correctly (this should be `logs-workloads-8`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 9 in the paper:
+
+![Figure 9 from the OSDI 2021 paper](figures/workloads_parallel.svg)
 
 No error bars are presented in the paper, so some variation should be expected. Just as in the previous figure, all of the workloads are likely to deviate from those in the paper in the same direction.
 
 
-WAN Experiments: Parallel Connections (5 minutes working, 3 hours waiting)
+WAN Experiments: Parallel Connections (5 minutes working, 9 hours waiting)
 --------------------------------------------------------------------------
 ```
 $ ./magebench.py spawn -a 1 -g oregon iowa
@@ -232,19 +250,27 @@ $ ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 
 $ ./magebench.py fetch-logs logs-wan-conn
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connections** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper.
+After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connections** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper:
 
-For this graph, you may see some variation compared to the ones in the OSDI paper because it depends on wide-area network conditio
+![Figure 10 from the OSDI 2021 paper](figures/wan_parallel.svg)
 
-WAN Experiments: Parallel OTs (5 minutes working, 3 hours waiting)
+For this graph, you may see some variation compared to the ones in the OSDI paper because (1) it depends on wide-area network conditions, which fluctuate, and (2) we improved MAGE after the submission to allow multiple outstanding OTs over a single connection, allowing it rely on fewer threads. To give you an idea of the expected variation, here is an example of a graph based on a more recent run of this experiment:
+
+![Results from a more recent run of this experiment](figures/wan_parallel_recent.svg)
+
+WAN Experiments: Parallel OTs (5 minutes working, 2.5 hours waiting)
 ------------------------------------------------------------------
 Run the following commands:
 ```
 $ ./magebench.py spawn -a 1 -g oregon
-$ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 -o 2 4 8 16 32 64 128 256 -c 2
+$ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 1 -w 1 -o 2 4 8 16 32 64 128 256 -c 2
 $ ./magebench.py fetch-logs logs-wan-ot
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-wan-ot` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: OT Parallelism** section. Make sure that the first cell assigns `wan_ot_directory` correctly (this should be `logs-wan-ot`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should show the running time decrease as the number of concurrent OTs increases.
+After running the `fetch-logs` command, you should see a local directory `logs-wan-ot` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: OT Parallelism** section. Make sure that the first cell assigns `wan_ot_directory` correctly (this should be `logs-wan-ot`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should show the running time decrease as the number of concurrent OTs increases. Here is results from our run, including 10 trials and error bars depicting the quartiles:
 
-**There is no analogue to this graph in the paper; it corresponds to the statement in Section 8.7 that we can overcome the WAN latency by performing more OTs concurrently. I *might* add a graph to this effect in the camera-ready version (with the shepherd's approval).**
+![Sample results for this experiment](figures/wan_concurrent_ots.svg)
+
+**There is no analogue of this graph in the paper; it corresponds to the statement in Section 8.7 that we can overcome the WAN latency by performing more OTs concurrently. I *might* add a graph to this effect in the camera-ready version (with the shepherd's approval).**
+
+To make this experiment fast, the command above runs only one trial for each point in the graph; in contrast, our sample graph above does 10 trials. As a result, the graph produced in the IPython notebook might appear less "smooth" than the sample graph above. If you have extra time, you can try increasing the number of trials (e.g., use `-t 3` or `-t 10` instead of `-t 1` when running the above command), but this will take significantly longer.
