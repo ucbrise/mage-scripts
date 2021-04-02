@@ -172,7 +172,7 @@ This copies the log files, which includes how long the total execution took, to 
 
 Now that you have the log files locally, let's draw a graph representing our data. We have three data points (for each of the three scenarios), so we'll draw a bar graph showing all three data points.
 
-Run `jupyter notebook` to start an IPython notebook. If you're running this locally (e.g., on your laptop), your web browser should open, displaying a web page (probably hosted on `localhost:8888`). If you are running this on a remote server, you'll need to configure Jupyter to serve globally. If you are an OSDI Artiface Evaluator using one of our provided cloud instances, then everything should be pre-configured; you can just go to `http://<IP Address>:8888` and enter the password provided in the private README file.
+Run `jupyter notebook` to start an IPython notebook. If you're running this locally (e.g., on your laptop), your web browser should open, displaying a web page (probably hosted on `localhost:8888`). If you are running this on a remote server, you'll need to configure Jupyter to serve globally. If you are an OSDI Artifact Evaluator using one of our provided cloud instances, then everything should be pre-configured; see the directions in the private README file.
 
 Click on `graphs.ipynb` and run the first few cells. Eventually, you will reach a cell labeled, "Simple, Guided Example". Run the next four cells, ensuring that the variable `simple_directory` is correct (this is the directory where the code will look for the log files you downloaded above). The next cell will show a bar graph with the data from the experiment you just ran. It should look similar to this:
 
