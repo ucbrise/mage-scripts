@@ -28,8 +28,7 @@ then
 	elif [[ $PROBLEM_NAME = "real_statistics" ]]
 	then
 		level=2
-	elif [[ $PROBLEM_NAME = "real_matrix_vector_multiply" ]] || [[ $PROBLEM_NAME = "real_naive_matrix_multiply" ]] || [[ $PROBLEM_NAME = "real_tiled_matrix_multiply" ]]
-	then
+	else
 		level=1
 	fi
 	./ckks_utils encrypt_file 1 $level ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}_garbler.input
