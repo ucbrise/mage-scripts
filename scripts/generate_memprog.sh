@@ -18,11 +18,19 @@ fi
 
 pushd ~/work/mage/bin
 
+sudo swapoff -a
+
 if [[ -z $LOG_NAME ]]
 then
 	./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE
 else
-	./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE > ~/logs/${LOG_NAME}.planning
+	# Benchmark this one
+	sudo free
+	sudo sync
+	echo 3 | sudo tee /proc/sys/vm/drop_caches
+	sudo free
+
+	/usr/bin/time -v ./planner $PROBLEM_NAME $PROTOCOL $CONFIG $PARTY $WORKER $PROBLEM_SIZE > ~/logs/${LOG_NAME}.planning 2> ~/logs/${LOG_NAME}.planstats
 fi
 
 rm -f ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}.prog ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}.repprog ${PROBLEM_NAME}_${PROBLEM_SIZE}_${WORKER}.ann
