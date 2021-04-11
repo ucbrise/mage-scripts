@@ -6,12 +6,15 @@ GCP_PROJECT = "rise-mage"
 
 oregon = ("us-west1", "b")
 iowa = ("us-central1", "b")
+virginia = ("us-east4", "b")
 
 def location_to_region_zone(loc):
     if loc == "oregon":
         return oregon
     elif loc == "iowa":
         return iowa
+    elif loc == "virginia":
+        return virginia
     else:
         return None
 

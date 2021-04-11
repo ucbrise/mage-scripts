@@ -271,7 +271,7 @@ if __name__ == "__main__":
     parser_spawn.add_argument("-n", "--name", default = "")
     parser_spawn.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_spawn.add_argument("-d", "--large-work-disk", action = "store_true")
-    parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
+    parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
     parser_spawn.set_defaults(func = spawn)
 
     parser_provision = subparsers.add_parser("provision")
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     parser_run_lan.set_defaults(func = run_lan)
 
     parser_run_wan = subparsers.add_parser("run-wan")
-    parser_run_wan.add_argument("location", choices = ("oregon", "iowa"))
+    parser_run_wan.add_argument("location", choices = ("oregon", "iowa", "virginia"))
     parser_run_wan.add_argument("-p", "--programs", action = "extend", nargs = "+")
     parser_run_wan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
     parser_run_wan.add_argument("-m", "--mem-limit", type=str, default = "1gb")
@@ -327,7 +327,7 @@ if __name__ == "__main__":
     parser_purge.add_argument("-n", "--name", default = "")
     parser_purge.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_purge.add_argument("-d", "--large-work-disk", action = "store_true")
-    parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa"))
+    parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
     parser_purge.set_defaults(func = purge)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")
