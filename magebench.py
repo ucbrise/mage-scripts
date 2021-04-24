@@ -179,6 +179,7 @@ def make_run_wan(paired):
                                 ot_pipeline_depth = max(ot_concurrency // (ot_num_daemons * workers_per_node), 1)
                                 log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
                                 if paired:
+                                    log_name = "paired" + log_name
                                     experiment.run_paired_wan_experiment(c, problem_name, problem_size, scenario, args.mem_limit, args.location, log_name, workers_per_node, c.num_lan_machines, ot_pipeline_depth, ot_num_daemons)
                                 else:
                                     experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.mem_limit, args.location, log_name, workers_per_node, 1, ot_pipeline_depth, ot_num_daemons)
