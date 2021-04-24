@@ -39,13 +39,18 @@ def generate_ckks_keys(c):
 
 def provision_cluster(c):
     def provision_machine(machine, id):
-        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", machine.provider)
+        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1}".format(machine.provider, "paired-noswap" if c.paired else "regular"))
         remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
         if id < c.num_lan_machines:
             remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config".format(id))
-        for location, loc_id in c.location_to_id.items():
-            if id == 0 or id == loc_id:
-                remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json 0 {0} ~/config-{0}".format(location))
+        if c.paired:
+            for location, loc_id in c.location_to_id.items():
+                if id in range(c.num_lan_machines) or id in range(loc_id, loc_id + c.num_lan_machines):
+                    remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} {1}-paired ~/config-{1}-paired".format(id, location))
+        else:
+            for location, loc_id in c.location_to_id.items():
+                if id == 0 or id == loc_id:
+                    remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json 0 {0} ~/config-{0}".format(location))
     c.for_each_concurrently(provision_machine)
     generate_ckks_keys(c)
 
@@ -65,7 +70,7 @@ def spawn(args):
     if args.name == "":
         args.name = "mage-{0}".format(socket.gethostname())
     print("Spawning cluster...")
-    c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, *args.gcloud_machine_locations)
+    c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, args.paired_wan_setup, *args.gcloud_machine_locations)
     c.save_to_file("cluster.json")
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
@@ -144,34 +149,40 @@ def run_lan(args):
                 log_name = "workers_{0}_{1}_{2}_{3}_t{4}".format(num_workers_per_party, problem_name, problem_size, scenario, trial)
                 experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers)
 
-def run_wan(args):
-    c = cluster.Cluster.load_from_file("cluster.json")
-    if args.programs is None:
-        args.programs = ("merge_sorted_1048576",)
-    if args.scenarios is None:
-        args.scenarios = ("mage",)
-    if args.workers_per_node is None:
-        args.workers_per_node = (1,)
-    if args.ot_num_connections is None:
-        args.ot_num_connections = (3,)
-    if args.ot_concurrency is None:
-        args.ot_concurrency = (3,)
 
-    parsed_programs = parse_program_list(args.programs)
-    for problem_name, problem_size in parsed_programs:
-        if problem_name.startswith("real"):
-            print("Skipping {0} (only halfgates supported over WAN)".format(problem_name))
-            continue
-        else:
-            protocol = "halfgates"
-        for trial in range(1, args.trials + 1):
-            for scenario in args.scenarios:
-                for workers_per_node in args.workers_per_node:
-                    for ot_num_daemons in args.ot_num_connections:
-                        for ot_concurrency in args.ot_concurrency:
-                            ot_pipeline_depth = max(ot_concurrency // (ot_num_daemons * workers_per_node), 1)
-                            log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
-                            experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.mem_limit, args.location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons)
+def make_run_wan(paired):
+    def run_wan(args):
+        c = cluster.Cluster.load_from_file("cluster.json")
+        if args.programs is None:
+            args.programs = ("merge_sorted_1048576",)
+        if args.scenarios is None:
+            args.scenarios = ("mage",)
+        if args.workers_per_node is None:
+            args.workers_per_node = (1,)
+        if args.ot_num_connections is None:
+            args.ot_num_connections = (3,)
+        if args.ot_concurrency is None:
+            args.ot_concurrency = (3,)
+
+        parsed_programs = parse_program_list(args.programs)
+        for problem_name, problem_size in parsed_programs:
+            if problem_name.startswith("real"):
+                print("Skipping {0} (only halfgates supported over WAN)".format(problem_name))
+                continue
+            else:
+                protocol = "halfgates"
+            for trial in range(1, args.trials + 1):
+                for scenario in args.scenarios:
+                    for workers_per_node in args.workers_per_node:
+                        for ot_num_daemons in args.ot_num_connections:
+                            for ot_concurrency in args.ot_concurrency:
+                                ot_pipeline_depth = max(ot_concurrency // (ot_num_daemons * workers_per_node), 1)
+                                log_name = "wan_{0}_{1}_{2}_{3}_{4}_{5}_{6}_t{7}".format(args.location, workers_per_node, ot_pipeline_depth, ot_num_daemons, problem_name, problem_size, scenario, trial)
+                                if paired:
+                                    experiment.run_paired_wan_experiment(c, problem_name, problem_size, scenario, args.mem_limit, args.location, log_name, workers_per_node, c.num_lan_machines, ot_pipeline_depth, ot_num_daemons)
+                                else:
+                                    experiment.run_wan_experiment(c, problem_name, problem_size, scenario, args.mem_limit, args.location, log_name, workers_per_node, 1, ot_pipeline_depth, ot_num_daemons)
+    return run_wan
 
 def run_halfgates_baseline(args):
     if args.sizes is None:
@@ -233,7 +244,7 @@ def purge(args):
         args.gcloud_machine_locations = tuple()
     if args.name == "":
         args.name = "mage-{0}".format(socket.gethostname())
-    cloud.deallocate_cluster_by_info(args.name, *args.gcloud_machine_locations)
+    cloud.deallocate_cluster_by_info(args.name, args.azure_machine_count, args.paired_wan_setup, *args.gcloud_machine_locations)
     try:
         os.remove("cluster.json")
     except FileNotFoundError:
@@ -272,6 +283,7 @@ if __name__ == "__main__":
     parser_spawn.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_spawn.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
+    parser_spawn.add_argument("-p", "--paired-wan-setup", action = "store_true")
     parser_spawn.set_defaults(func = spawn)
 
     parser_provision = subparsers.add_parser("provision")
@@ -303,7 +315,18 @@ if __name__ == "__main__":
     parser_run_wan.add_argument("-w", "--workers-per-node", type = int, action = "extend", nargs = "+")
     parser_run_wan.add_argument("-o", "--ot-concurrency", type = int, action = "extend", nargs = "+")
     parser_run_wan.add_argument("-c", "--ot-num-connections", type = int, action = "extend", nargs = "+")
-    parser_run_wan.set_defaults(func = run_wan)
+    parser_run_wan.set_defaults(func = make_run_wan(False))
+
+    parser_run_paired_wan = subparsers.add_parser("run-paired-wan")
+    parser_run_paired_wan.add_argument("location", choices = ("oregon", "iowa", "virginia"))
+    parser_run_paired_wan.add_argument("-p", "--programs", action = "extend", nargs = "+")
+    parser_run_paired_wan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
+    parser_run_paired_wan.add_argument("-m", "--mem-limit", type=str, default = "max")
+    parser_run_paired_wan.add_argument("-t", "--trials", type = int, default = 1)
+    parser_run_paired_wan.add_argument("-w", "--workers-per-node", type = int, action = "extend", nargs = "+")
+    parser_run_paired_wan.add_argument("-o", "--ot-concurrency", type = int, action = "extend", nargs = "+")
+    parser_run_paired_wan.add_argument("-c", "--ot-num-connections", type = int, action = "extend", nargs = "+")
+    parser_run_paired_wan.set_defaults(func = make_run_wan(True))
 
     parser_run_hgb = subparsers.add_parser("run-halfgates-baseline")
     parser_run_hgb.add_argument("-z", "--sizes", action = "extend", nargs = "+", type = int)
@@ -320,7 +343,6 @@ if __name__ == "__main__":
     parser_run_ckb.set_defaults(func = run_ckks_baseline)
 
     parser_deallocate = subparsers.add_parser("deallocate")
-    # parser_deallocate.add_argument("-n", "--name", default = "mage-cluster")
     parser_deallocate.set_defaults(func = deallocate)
 
     parser_purge = subparsers.add_parser("purge")
@@ -328,6 +350,7 @@ if __name__ == "__main__":
     parser_purge.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_purge.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
+    parser_purge.add_argument("-p", "--paired-wan-setup", action = "store_true")
     parser_purge.set_defaults(func = purge)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")

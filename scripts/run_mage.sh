@@ -20,11 +20,14 @@ fi
 
 pushd ~/work/mage/bin
 
-PREFIX=
+PREFIX="sudo"
 if [[ $SCENARIO = "mage" ]]
 then
 	sudo swapoff -a
-	PREFIX="sudo cgexec -g memory:memprog${LIMIT}"
+	if [[ $LIMIT != "max" ]]
+	then
+		PREFIX="sudo cgexec -g memory:memprog${LIMIT}"
+	fi
 elif [[ $SCENARIO = "unbounded" ]]
 then
 	sudo swapoff -a
@@ -33,7 +36,10 @@ elif [[ $SCENARIO = "os" ]]
 then
 	sudo swapoff -a
 	sudo swapon /dev/disk/cloud/azure_resource-part2
-	PREFIX="sudo cgexec -g memory:memprog${LIMIT}"
+	if [[ $LIMIT != "max" ]]
+	then
+		PREFIX="sudo cgexec -g memory:memprog${LIMIT}"
+	fi
 else
 	echo "Unknown scenario" $SCENARIO
 	exit 2

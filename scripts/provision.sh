@@ -9,12 +9,26 @@ then
     then
         DISK_DEVICE=/dev/disk/azure/scsi1/lun0
         sudo mkfs.ext4 -q $DISK_DEVICE
+    elif [[ $2 = "paired-noswap" ]]
+    then
+        DISK_DEVICE=/dev/disk/cloud/azure_resource-part1
+    elif [[ $2 = "paired-swap" ]]
+    then
+        DISK_DEVICE=/dev/disk/cloud/azure_resource-part2
     else
         DISK_DEVICE=/dev/disk/cloud/azure_resource-part3
     fi
 elif [[ $1 = "gcloud" ]]
 then
-    DISK_DEVICE=/dev/nvme0n1p3
+    if [[ $2 = "paired-noswap" ]]
+    then
+        DISK_DEVICE=/dev/nvme0n1p1
+    elif [[ $2 = "paired-swap" ]]
+    then
+        DISK_DEVICE=/dev/nvme0n1p2
+    else
+        DISK_DEVICE=/dev/nvme0n1p3
+    fi
 else
     echo "Unknown provider" $1
     exit 1
@@ -39,6 +53,14 @@ mkdir -p ~/work
 sudo mount ${DISK_DEVICE} ~/work
 sudo chown $(whoami):$(whoami) ~/work
 cp -r /opt/* ~/work
+
+# Use the latest version of MAGE
+pushd ~/work/mage
+git fetch origin
+git checkout dev
+git pull origin dev
+make
+popd
 
 mkdir -p ~/logs
 

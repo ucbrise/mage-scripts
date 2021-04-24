@@ -22,8 +22,12 @@ wdisk_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id
 ip_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-ip"
 nic_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-nic"
 
-def spawn_cluster(c, name, count, use_large_work_disk = False, subscription_id = SUBSCRIPTION_ID, location = LOCATION, image_id = IMAGE_ID):
-    with open("cloud-init.yaml", "rb") as f:
+def spawn_cluster(c, name, count, disk_layout_name, use_large_work_disk = False, subscription_id = SUBSCRIPTION_ID, location = LOCATION, image_id = IMAGE_ID):
+    cloud_init_file = "cloud-init-azure.yaml"
+    if disk_layout_name == "paired-noswap":
+        cloud_init_file = "cloud-init-azure-paired.yaml"
+
+    with open(cloud_init_file, "rb") as f:
         cloud_init_bytes = f.read()
     cloud_init_encoded = base64.urlsafe_b64encode(cloud_init_bytes).decode("utf-8")
 
@@ -86,7 +90,7 @@ def spawn_cluster(c, name, count, use_large_work_disk = False, subscription_id =
 
     poller = network_client.subnets.begin_create_or_update(resource_group, vnet_name(name), subnet_name(name),
     {
-        "address_prefix": "10.0.0.0/28",
+        "address_prefix": "10.0.0.0/26",
         "network_security_group": {
             "id": nsg_result.id
         }

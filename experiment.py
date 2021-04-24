@@ -16,6 +16,57 @@ def party_from_global_id(cluster, global_id):
 def clear_memory_caches(cluster, worker_ids):
     cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), worker_ids)
 
+def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, nodes_per_party, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
+    protocol = "halfgates"
+    program_name = "{0}_{1}".format(problem_name, problem_size)
+    config_file = "~/config-{0}-paired/{1}/config_{2}_{3}_{4}_{5}.yaml".format(location, mem_limit if scenario == "mage" else "unbounded", protocol, workers_per_node * nodes_per_party, ot_pipeline_depth, ot_num_daemons)
+
+    log_prefix = program_name + "_" + location
+    if isinstance(log_name, int):
+        log_name = log_prefix + "_t{1}".format(location, log_name)
+    elif log_name is None:
+        log_name = log_prefix
+    elif not isinstance(log_name, str):
+        raise RuntimeError("log_name must be a string, int or None (got {0})".format(repr(log_name)))
+
+    worker_ids = list(range(nodes_per_party)) + list(range(cluster.location_to_id[location], cluster.location_to_id[location] + nodes_per_party))
+    def copy_scripts(machine, global_id):
+        for script in ("./scripts/generate_input.sh", "./scripts/generate_memprog.sh", "./scripts/run_mage.sh"):
+            remote.copy_to(machine.public_ip_address, False, script)
+    cluster.for_each_concurrently(copy_scripts, worker_ids)
+
+    def generate_input(machine, global_id, thread_id):
+        id = ((global_id // workers_per_node) * workers_per_node) + thread_id
+        remote.exec_sync(machine.public_ip_address, "~/generate_input.sh {0} {1} {2} {3} {4}".format(problem_name, problem_size, protocol, id, workers_per_node * nodes_per_party))
+    if generate_fresh_input:
+        cluster.for_each_multiple_concurrently(generate_input, workers_per_node, worker_ids)
+
+    def generate_memprog(machine, global_id, thread_id):
+        party = wan_party_from_global_id(cluster, global_id)
+        id = ((global_id // workers_per_node) * workers_per_node) + thread_id
+        if scenario == "mage":
+            log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, id)
+        else:
+            # So we don't count this as a "planning" measurement
+            log_name_to_use = ""
+        remote.exec_sync(machine.public_ip_address, "~/generate_memprog.sh {0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, id, log_name_to_use))
+    if generate_fresh_memprog:
+        cluster.for_each_multiple_concurrently(generate_memprog, workers_per_node, worker_ids)
+
+    def run_mage(machine, global_id, thread_id):
+        party = wan_party_from_global_id(cluster, global_id)
+        id = ((global_id // workers_per_node) * workers_per_node) + thread_id
+        time.sleep(10 * id)
+        if party == 1:
+            time.sleep(10 * workers_per_node + 20) # Wait for all evaluator workers to start first
+        log_name_to_use = "{0}_w{1}".format(log_name, id)
+        remote.exec_sync(machine.public_ip_address, "~/run_mage.sh {0} {1} {2} {3} {4} {5} {6} {7} {8}".format(scenario, mem_limit, protocol, config_file, party, id, program_name, log_name_to_use, "true"))
+
+    if protocol != "ckks":
+        time.sleep(70) # Wait for TIME-WAIT state to expire
+    clear_memory_caches(cluster, worker_ids)
+    cluster.for_each_multiple_concurrently(run_mage, workers_per_node, worker_ids)
+
 def run_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"
     program_name = "{0}_{1}".format(problem_name, problem_size)

@@ -75,8 +75,18 @@ def generate_wan_config_dict(scenario, num_workers_per_party, azure_id, gcloud_i
     config = {}
     populate_top_level_params("halfgates", scenario, num_workers_per_party, config, ot_pipeline_depth, ot_num_daemons)
 
-    evaluator_workers = [generate_worker_config_dict(gcloud_id, 56000 + i, 57000 + i, cluster, True, i) for i in range(party_size)]
-    garbler_workers = [generate_worker_config_dict(azure_id, 56000 + i, 57000 + i, cluster, True, i) for i in range(party_size)]
+    evaluator_workers = [generate_worker_config_dict(gcloud_id, 56000 + i, 57000 + i, cluster, True, i) for i in range(num_workers_per_party)]
+    garbler_workers = [generate_worker_config_dict(azure_id, 56000 + i, 57000 + i, cluster, True, i) for i in range(num_workers_per_party)]
+    config["parties"] = [{"workers": evaluator_workers}, {"workers": garbler_workers}]
+    return config
+
+def generate_paired_wan_config_dict(scenario, num_workers_per_party, id, azure_ids, gcloud_ids, cluster, ot_pipeline_depth = 1, ot_num_daemons = 3):
+    config = {}
+    num_workers_per_machine = num_workers_per_party // cluster["num_lan_machines"]
+    populate_top_level_params("halfgates", scenario, num_workers_per_machine, config, ot_pipeline_depth, ot_num_daemons)
+
+    evaluator_workers = [generate_worker_config_dict(gcloud_ids[i // num_workers_per_machine], 56000 + i, 57000 + i, cluster, True, i) for i in range(num_workers_per_party)]
+    garbler_workers = [generate_worker_config_dict(azure_ids[i // num_workers_per_machine], 56000 + i, 57000 + i, cluster, True, i) for i in range(num_workers_per_party)]
     config["parties"] = [{"workers": evaluator_workers}, {"workers": garbler_workers}]
     return config
 
@@ -94,7 +104,16 @@ if __name__ == "__main__":
 
     creation_dir = sys.argv[4]
 
-    memory_bounds = ("unbounded", "1gb", "2gb", "4gb", "8gb", "16gb", "32gb", "62gb")
+    paired = False
+    paired_ending = "-paired"
+    if location.endswith(paired_ending):
+        paired = True
+        location = location[:-len(paired_ending)]
+
+    if paired:
+        memory_bounds = ("unbounded", "max")
+    else:
+        memory_bounds = ("unbounded", "1gb", "2gb", "4gb", "8gb", "16gb", "32gb", "62gb")
     dir_paths = tuple(os.path.join(creation_dir, mem_bound) for mem_bound in memory_bounds)
     for dir in dir_paths:
         os.makedirs(dir, exist_ok = True)
@@ -113,6 +132,32 @@ if __name__ == "__main__":
                     output_path = os.path.join(output_dir_path, "config_{0}_{1}.yaml".format(protocol, party_size))
                     with open(output_path, "w") as f:
                         yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)
+    elif paired:
+        num_lan_machines = cluster["num_lan_machines"]
+
+        azure_ids = range(num_lan_machines)
+        gcloud_ids = range(cluster["location_to_id"][location], cluster["location_to_id"][location] + num_lan_machines)
+
+        assert (id in azure_ids) or (id in gcloud_ids)
+
+        for scenario, output_dir_path in zip(memory_bounds, dir_paths):
+            for workers_per_node in (1, 2, 4, 8, 16):
+                party_size = num_lan_machines * workers_per_node
+                for ot_pipeline_depth in tuple(2 ** i for i in range(9)):
+                    for ot_num_daemons in tuple(2 ** i for i in range(9)):
+                        ot_params = (ot_pipeline_depth, ot_num_daemons)
+
+                        if scenario == "max":
+                            if id in azure_ids:
+                                size = "62gb"
+                            elif id in gcloud_ids:
+                                size = "30gb"
+                        elif scenario == "unbounded":
+                            size = "4096gb" # Larger than the standard "unbounded" size
+                        config_dict = generate_paired_wan_config_dict(size, party_size, id, azure_ids, gcloud_ids, cluster, *ot_params)
+                        output_path = os.path.join(output_dir_path, "config_halfgates_{0}_{1}_{2}.yaml".format(party_size, ot_pipeline_depth, ot_num_daemons))
+                        with open(output_path, "w") as f:
+                            yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)
     else:
         azure_id = id
         gcloud_id = cluster["location_to_id"][location]

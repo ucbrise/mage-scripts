@@ -36,8 +36,12 @@ def wait_for_operation(compute, project, zone, operation):
         time.sleep(1)
 
 # Reference: https://cloud.google.com/compute/docs/reference/rest/v1/instances/insert
-def spawn_instance(m, name, region, zone_letter, project_name = GCP_PROJECT):
-    with open("cloud-init-gcp.yaml", "rb") as f:
+def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, region, zone_letter, project_name = GCP_PROJECT):
+    cloud_init_file = "cloud-init-gcp.yaml"
+    if disk_layout_name == "paired-noswap":
+        cloud_init_file = "cloud-init-gcp-paired.yaml"
+
+    with open(cloud_init_file, "rb") as f:
         cloud_init_bytes = f.read()
 
     target_zone = "{0}-{1}".format(region, zone_letter)
@@ -45,11 +49,25 @@ def spawn_instance(m, name, region, zone_letter, project_name = GCP_PROJECT):
 
     image_response = compute.images().getFromFamily(project = project_name, family = "mage-deps").execute()
 
+    local_ssds = []
+    for i in range(num_local_ssds):
+        local_ssds.append({
+            "kind": "compute#attachedDisk",
+            "mode": "READ_WRITE",
+            "autoDelete": True,
+            "deviceName": "local-ssd-{0}".format(i),
+            "type": "SCRATCH",
+            "interface": "NVME",
+            "initializeParams": {
+                "diskType": "projects/{0}/zones/{1}/diskTypes/local-ssd".format(project_name, target_zone),
+            }
+        })
+
     request_body = {
         "kind": "compute#instance",
         "name": name,
         "zone": "projects/{0}/zones/{1}".format(project_name, target_zone),
-        "machineType": "projects/{0}/zones/{1}/machineTypes/n2-highcpu-2".format(project_name, target_zone),
+        "machineType": "projects/{0}/zones/{1}/machineTypes/{2}".format(project_name, target_zone, instance_type),
         "displayDevice": {
             "enableDisplay": False,
         },
@@ -86,17 +104,7 @@ def spawn_instance(m, name, region, zone_letter, project_name = GCP_PROJECT):
                 },
                 "diskEncryptionKey": {}
             },
-            {
-                "kind": "compute#attachedDisk",
-                "mode": "READ_WRITE",
-                "autoDelete": True,
-                "deviceName": "local-ssd-0",
-                "type": "SCRATCH",
-                "interface": "NVME",
-                "initializeParams": {
-                    "diskType": "projects/{0}/zones/{1}/diskTypes/local-ssd".format(project_name, target_zone),
-                }
-            }
+            *local_ssds
         ],
         "canIpForward": False,
         "networkInterfaces": [
