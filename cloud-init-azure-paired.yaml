@@ -5,7 +5,8 @@ disk_setup:
         layout: true
     overwrite: true
 fs_setup:
-    - device: ephemeral0
+    - device: ephemeral0.1
       filesystem: ext4
 mounts:
     - [ ephemeral0 ]
+    - [ ephemeral0.1 ]

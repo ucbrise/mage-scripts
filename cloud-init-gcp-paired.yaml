@@ -5,7 +5,8 @@ disk_setup:
         layout: true
     overwrite: true
 fs_setup:
-    - device: /dev/nvme0n1
+    - device: /dev/nvme0n1p1
       filesystem: ext4
 mounts:
     - [ /dev/nvme0n1 ]
+    - [ /dev/nvme0n1p1 ]
