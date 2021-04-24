@@ -36,14 +36,14 @@ def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem
     cluster.for_each_concurrently(copy_scripts, worker_ids)
 
     def generate_input(machine, global_id, thread_id):
-        id = ((global_id // workers_per_node) * workers_per_node) + thread_id
+        id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
         remote.exec_sync(machine.public_ip_address, "~/generate_input.sh {0} {1} {2} {3} {4}".format(problem_name, problem_size, protocol, id, workers_per_node * nodes_per_party))
     if generate_fresh_input:
         cluster.for_each_multiple_concurrently(generate_input, workers_per_node, worker_ids)
 
     def generate_memprog(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
-        id = ((global_id // workers_per_node) * workers_per_node) + thread_id
+        id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
         if scenario == "mage":
             log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, id)
         else:
@@ -55,10 +55,10 @@ def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem
 
     def run_mage(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
-        id = ((global_id // workers_per_node) * workers_per_node) + thread_id
+        id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
         time.sleep(10 * id)
         if party == 1:
-            time.sleep(10 * workers_per_node + 20) # Wait for all evaluator workers to start first
+            time.sleep(10 * workers_per_node * nodes_per_party + 20) # Wait for all evaluator workers to start first
         log_name_to_use = "{0}_w{1}".format(log_name, id)
         remote.exec_sync(machine.public_ip_address, "~/run_mage.sh {0} {1} {2} {3} {4} {5} {6} {7} {8}".format(scenario, mem_limit, protocol, config_file, party, id, program_name, log_name_to_use, "true"))
 

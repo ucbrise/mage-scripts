@@ -254,6 +254,11 @@ def purge(args):
 def logs_directory(c, id, logs_directory):
     if id < c.num_lan_machines:
         directory_name = "{0:02d}".format(id)
+    elif c.paired:
+        for location, loc_id in c.location_to_id.items():
+            if id in range(loc_id, loc_id + c.num_lan_machines):
+                directory_name = "{0}-{1:02d}".format(location, id)
+                break
     else:
         for location, loc_id in c.location_to_id.items():
             if id == loc_id:
