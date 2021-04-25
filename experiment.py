@@ -16,6 +16,9 @@ def party_from_global_id(cluster, global_id):
 def clear_memory_caches(cluster, worker_ids):
     cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), worker_ids)
 
+def clear_output_files(cluster, worker_ids, prefix):
+    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "rm -f ~/work/mage/bin/{0}* ~/work/mage/bin/*swapfile".format(prefix)), worker_ids)
+
 def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, nodes_per_party, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"
     program_name = "{0}_{1}".format(problem_name, problem_size)
@@ -41,17 +44,18 @@ def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem
     if generate_fresh_input:
         cluster.for_each_multiple_concurrently(generate_input, workers_per_node, worker_ids)
 
-    def generate_memprog(machine, global_id, thread_id):
+    def generate_memprog(machine, global_id):
         party = wan_party_from_global_id(cluster, global_id)
-        id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
-        if scenario == "mage":
-            log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, id)
-        else:
-            # So we don't count this as a "planning" measurement
-            log_name_to_use = ""
-        remote.exec_sync(machine.public_ip_address, "~/generate_memprog.sh {0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, id, log_name_to_use))
+        for thread_id in range(workers_per_node):
+            id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
+            if scenario == "mage":
+                log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, id)
+            else:
+                # So we don't count this as a "planning" measurement
+                log_name_to_use = ""
+            remote.exec_sync(machine.public_ip_address, "~/generate_memprog.sh {0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, id, log_name_to_use))
     if generate_fresh_memprog:
-        cluster.for_each_multiple_concurrently(generate_memprog, workers_per_node, worker_ids)
+        cluster.for_each_concurrently(generate_memprog, worker_ids)
 
     def run_mage(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
@@ -66,6 +70,7 @@ def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem
         time.sleep(70) # Wait for TIME-WAIT state to expire
     clear_memory_caches(cluster, worker_ids)
     cluster.for_each_multiple_concurrently(run_mage, workers_per_node, worker_ids)
+    clear_output_files(cluster, worker_ids, problem_name)
 
 def run_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"

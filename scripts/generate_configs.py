@@ -149,7 +149,7 @@ if __name__ == "__main__":
 
                         if scenario == "max":
                             if id in azure_ids:
-                                size = "62gb"
+                                size = "60gb"
                             elif id in gcloud_ids:
                                 size = "30gb"
                         elif scenario == "unbounded":
