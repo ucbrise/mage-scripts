@@ -12,7 +12,7 @@ def generate_worker_config_dict(global_id, internal_port, external_port, cluster
     worker["external_host"] = cluster["machines"][global_id]["public_ip_address" if wan else "private_ip_address"]
     worker["external_port"] = external_port
     if wan:
-        worker["storage_path"] = "~/work/scratch/worker{0}_swapfile".format(worker_id)
+        worker["storage_path"] = "/home/mage/work/scratch/worker{0}_swapfile".format(worker_id)
     else:
         worker["storage_path"] = "/dev/disk/cloud/azure_resource-part1"
     return worker
