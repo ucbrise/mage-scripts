@@ -44,3 +44,27 @@ wan_ot_start=$(date +%s)
 ./magebench.py deallocate
 wan_ot_end=$(date +%s)
 echo "WAN OT:" $(expr $wan_ot_end - $wan_ot_start) | tee wan_ot_time
+
+password_start=$(date +%s)
+./magebench.py spawn -a 4 -g oregon -p
+date +%s > password_start
+./magebench.py run-paired-wan oregon -p password_134217728 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_134217728
+./magebench.py run-paired-wan oregon -p password_67108864 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_67108864
+./magebench.py run-paired-wan oregon -p password_33554432 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_33554432
+./magebench.py run-paired-wan oregon -p password_16777216 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_16777216
+./magebench.py run-paired-wan oregon -p password_8388608 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_8388608
+./magebench.py run-paired-wan oregon -p password_4194304 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_4194304
+./magebench.py run-paired-wan oregon -p password_2097152 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_2097152
+./magebench.py run-paired-wan oregon -p password_1048576 -s mage -t 1 -w 2 -o 128 -c 1
+date +%s > password_1048576
+./magebench.py fetch-logs logs-password-4
+./magebench.py deallocate
+password_end=$(date +%s)
+echo "Password Reuse:" $(expr $password_end - $password_start) | tee password_time
