@@ -54,6 +54,13 @@ sudo mount ${DISK_DEVICE} ~/work
 sudo chown $(whoami):$(whoami) ~/work
 cp -r /opt/* ~/work
 
+mkdir -p ~/work/scratch
+if [[ $1 = "gcloud" && $2 = "paired-noswap" ]]
+then
+    sudo mount /dev/nvme0n2p1 ~/work/scratch
+    sudo chown $(whoami):$(whoami) ~/work/scratch
+fi
+
 # Use the latest version of MAGE
 pushd ~/work/mage
 git fetch origin

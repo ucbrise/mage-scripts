@@ -17,7 +17,7 @@ def clear_memory_caches(cluster, worker_ids):
     cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), worker_ids)
 
 def clear_output_files(cluster, worker_ids, prefix):
-    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "rm -f ~/work/mage/bin/{0}* ~/work/mage/bin/*swapfile".format(prefix)), worker_ids)
+    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "rm -f ~/work/mage/bin/{0}* ~/work/scratch/*".format(prefix)), worker_ids)
 
 def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, nodes_per_party, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"

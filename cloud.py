@@ -42,7 +42,7 @@ def spawn_cluster(name, num_lan_machines, use_large_work_disk, paired, *wan_mach
                     gcp_instance_name = "{0}-{1}-{2}".format(name, wan_location, location_id)
                     if (id % num_lan_machines) == 0:
                         c.location_to_id[wan_location] = id
-                    google_cloud.spawn_instance(c.machines[id], gcp_instance_name, "n2-highmem-4", 1, "paired-noswap", *region_zone)
+                    google_cloud.spawn_instance(c.machines[id], gcp_instance_name, "n2-highmem-4", 2, "paired-noswap", *region_zone)
             else:
                 wan_index = id - num_lan_machines
                 wan_location = wan_machine_locations[wan_index]
