@@ -40,6 +40,8 @@ def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, reg
     cloud_init_file = "cloud-init-gcp.yaml"
     if disk_layout_name == "paired-noswap":
         cloud_init_file = "cloud-init-gcp-paired.yaml"
+    elif disk_layout_name == "paired-swap":
+        cloud_init_file = "cloud-init-gcp-paired-swap.yaml"
 
     with open(cloud_init_file, "rb") as f:
         cloud_init_bytes = f.read()

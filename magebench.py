@@ -39,11 +39,11 @@ def generate_ckks_keys(c):
 
 def provision_cluster(c):
     def provision_machine(machine, id):
-        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1}".format(machine.provider, "paired-noswap" if c.paired else "regular"))
+        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1}".format(machine.provider, c.setup))
         remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
         if id < c.num_lan_machines:
             remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config".format(id))
-        if c.paired:
+        if c.setup in ("paired-noswap", "paired-swap"):
             for location, loc_id in c.location_to_id.items():
                 if id in range(c.num_lan_machines) or id in range(loc_id, loc_id + c.num_lan_machines):
                     remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} {1}-paired ~/config-{1}-paired".format(id, location))
@@ -70,7 +70,7 @@ def spawn(args):
     if args.name == "":
         args.name = "mage-{0}".format(socket.gethostname())
     print("Spawning cluster...")
-    c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, args.paired_wan_setup, *args.gcloud_machine_locations)
+    c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, args.wan_setup, *args.gcloud_machine_locations)
     c.save_to_file("cluster.json")
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
@@ -245,7 +245,7 @@ def purge(args):
         args.gcloud_machine_locations = tuple()
     if args.name == "":
         args.name = "mage-{0}".format(socket.gethostname())
-    cloud.deallocate_cluster_by_info(args.name, args.azure_machine_count, args.paired_wan_setup, *args.gcloud_machine_locations)
+    cloud.deallocate_cluster_by_info(args.name, args.azure_machine_count, args.wan_setup, *args.gcloud_machine_locations)
     try:
         os.remove("cluster.json")
     except FileNotFoundError:
@@ -255,7 +255,7 @@ def purge(args):
 def logs_directory(c, id, logs_directory):
     if id < c.num_lan_machines:
         directory_name = "{0:02d}".format(id)
-    elif c.paired:
+    elif c.setup in ("paired-noswap", "paired-swap"):
         for location, loc_id in c.location_to_id.items():
             if id in range(loc_id, loc_id + c.num_lan_machines):
                 directory_name = "{0}-{1:02d}".format(location, id)
@@ -289,7 +289,7 @@ if __name__ == "__main__":
     parser_spawn.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_spawn.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
-    parser_spawn.add_argument("-p", "--paired-wan-setup", action = "store_true")
+    parser_spawn.add_argument("-s", "--wan-setup", default = "regular")
     parser_spawn.set_defaults(func = spawn)
 
     parser_provision = subparsers.add_parser("provision")
@@ -356,7 +356,7 @@ if __name__ == "__main__":
     parser_purge.add_argument("-a", "--azure-machine-count", type = int, default = 2)
     parser_purge.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
-    parser_purge.add_argument("-p", "--paired-wan-setup", action = "store_true")
+    parser_purge.add_argument("-s", "--wan-setup", default = "regular")
     parser_purge.set_defaults(func = purge)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")

@@ -35,7 +35,7 @@ then
 elif [[ $SCENARIO = "os" ]]
 then
 	sudo swapoff -a
-	sudo swapon /dev/disk/cloud/azure_resource-part2
+	sudo swapon ~/swap_device
 	if [[ $LIMIT != "max" ]]
 	then
 		PREFIX="sudo cgexec -g memory:memprog${LIMIT}"

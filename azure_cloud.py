@@ -26,6 +26,8 @@ def spawn_cluster(c, name, count, disk_layout_name, use_large_work_disk = False,
     cloud_init_file = "cloud-init-azure.yaml"
     if disk_layout_name == "paired-noswap":
         cloud_init_file = "cloud-init-azure-paired.yaml"
+    elif disk_layout_name == "paired-swap":
+        cloud_init_file = "cloud-init-azure-paired-swap.yaml"
 
     with open(cloud_init_file, "rb") as f:
         cloud_init_bytes = f.read()

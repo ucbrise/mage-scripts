@@ -9,25 +9,29 @@ then
     then
         DISK_DEVICE=/dev/disk/azure/scsi1/lun0
         sudo mkfs.ext4 -q $DISK_DEVICE
-    elif [[ $2 = "paired-noswap" ]]
+    elif [[ $2 = "paired-noswap" || $2 = "paired-swap" ]]
     then
         DISK_DEVICE=/dev/disk/cloud/azure_resource-part1
-    elif [[ $2 = "paired-swap" ]]
-    then
-        DISK_DEVICE=/dev/disk/cloud/azure_resource-part2
+        if [[ $2 = "paired-swap" ]]
+        then
+            ln -s /dev/disk/cloud/azure_resource-part2 swap_device
+        fi
     else
         DISK_DEVICE=/dev/disk/cloud/azure_resource-part3
+        ln -s /dev/disk/cloud/azure_resource-part2 swap_device
     fi
 elif [[ $1 = "gcloud" ]]
 then
-    if [[ $2 = "paired-noswap" ]]
+    if [[ $2 = "paired-noswap" || $2 = "paired-swap" ]]
     then
         DISK_DEVICE=/dev/nvme0n1p1
-    elif [[ $2 = "paired-swap" ]]
-    then
-        DISK_DEVICE=/dev/nvme0n1p2
+        if [[ $2 = "paired-swap" ]]
+        then
+            ln -s /dev/nvme0n2p1 swap_device
+        fi
     else
         DISK_DEVICE=/dev/nvme0n1p3
+        ln -s /dev/nvme0n1p2 swap_device
     fi
 else
     echo "Unknown provider" $1

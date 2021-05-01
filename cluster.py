@@ -36,7 +36,7 @@ class Cluster(object):
         self.machines = tuple(Machine() for _ in range(size))
         self.num_lan_machines = size
         self.location_to_id = {}
-        self.paired = False
+        self.setup = "regular"
 
     def local_machine_ids(self):
         return range(self.num_lan_machines)
