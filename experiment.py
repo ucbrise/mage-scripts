@@ -13,11 +13,11 @@ def party_from_global_id(cluster, global_id):
     else:
         return 1 # garbler
 
-def clear_memory_caches(cluster, worker_ids):
-    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), worker_ids)
+def clear_memory_caches(cluster, node_ids):
+    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "sudo swapoff -a; sudo sync; echo 3 | sudo tee /proc/sys/vm/drop_caches"), node_ids)
 
-def clear_output_files(cluster, worker_ids, prefix):
-    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "rm -f ~/work/mage/bin/{0}* ~/work/scratch/*".format(prefix)), worker_ids)
+def clear_output_files(cluster, node_ids, prefix):
+    cluster.for_each_concurrently(lambda machine, id: remote.exec_sync(machine.public_ip_address, "rm -f ~/work/mage/bin/{0}* ~/work/scratch/*".format(prefix)), node_ids)
 
 def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, nodes_per_party, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"
@@ -32,30 +32,30 @@ def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem
     elif not isinstance(log_name, str):
         raise RuntimeError("log_name must be a string, int or None (got {0})".format(repr(log_name)))
 
-    worker_ids = list(range(nodes_per_party)) + list(range(cluster.location_to_id[location], cluster.location_to_id[location] + nodes_per_party))
+    node_ids = list(range(nodes_per_party)) + list(range(cluster.location_to_id[location], cluster.location_to_id[location] + nodes_per_party))
     def copy_scripts(machine, global_id):
         for script in ("./scripts/generate_input.sh", "./scripts/generate_memprog.sh", "./scripts/run_mage.sh"):
             remote.copy_to(machine.public_ip_address, False, script)
-    cluster.for_each_concurrently(copy_scripts, worker_ids)
+    cluster.for_each_concurrently(copy_scripts, node_ids)
 
     def generate_input(machine, global_id, thread_id):
         id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
         remote.exec_sync(machine.public_ip_address, "~/generate_input.sh {0} {1} {2} {3} {4}".format(problem_name, problem_size, protocol, id, workers_per_node * nodes_per_party))
     if generate_fresh_input:
-        cluster.for_each_multiple_concurrently(generate_input, workers_per_node, worker_ids)
+        cluster.for_each_multiple_concurrently(generate_input, workers_per_node, node_ids)
 
     def generate_memprog(machine, global_id):
         party = wan_party_from_global_id(cluster, global_id)
         for thread_id in range(workers_per_node):
             id = ((global_id * workers_per_node) + thread_id) % (workers_per_node * nodes_per_party)
             if scenario == "mage":
-                log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, id)
+                log_name_to_use = "{0}_w{1}".format(log_name, id)
             else:
                 # So we don't count this as a "planning" measurement
                 log_name_to_use = ""
             remote.exec_sync(machine.public_ip_address, "~/generate_memprog.sh {0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, id, log_name_to_use))
     if generate_fresh_memprog:
-        cluster.for_each_concurrently(generate_memprog, worker_ids)
+        cluster.for_each_concurrently(generate_memprog, node_ids)
 
     def run_mage(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
@@ -68,9 +68,9 @@ def run_paired_wan_experiment(cluster, problem_name, problem_size, scenario, mem
 
     if protocol != "ckks":
         time.sleep(70) # Wait for TIME-WAIT state to expire
-    clear_memory_caches(cluster, worker_ids)
-    cluster.for_each_multiple_concurrently(run_mage, workers_per_node, worker_ids)
-    clear_output_files(cluster, worker_ids, problem_name)
+    clear_memory_caches(cluster, node_ids)
+    cluster.for_each_multiple_concurrently(run_mage, workers_per_node, node_ids)
+    clear_output_files(cluster, node_ids, problem_name)
 
 def run_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit, location, log_name, workers_per_node, ot_pipeline_depth, ot_num_daemons, generate_fresh_input = True, generate_fresh_memprog = True):
     protocol = "halfgates"
@@ -85,27 +85,27 @@ def run_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit,
     elif not isinstance(log_name, str):
         raise RuntimeError("log_name must be a string, int or None (got {0})".format(repr(log_name)))
 
-    worker_ids = (0, cluster.location_to_id[location])
+    node_ids = (0, cluster.location_to_id[location])
     def copy_scripts(machine, global_id):
         for script in ("./scripts/generate_input.sh", "./scripts/generate_memprog.sh", "./scripts/run_mage.sh"):
             remote.copy_to(machine.public_ip_address, False, script)
-    cluster.for_each_concurrently(copy_scripts, worker_ids)
+    cluster.for_each_concurrently(copy_scripts, node_ids)
 
     def generate_input(machine, global_id, thread_id):
         remote.exec_sync(machine.public_ip_address, "~/generate_input.sh {0} {1} {2} {3} {4}".format(problem_name, problem_size, protocol, thread_id, workers_per_node))
     if generate_fresh_input:
-        cluster.for_each_multiple_concurrently(generate_input, workers_per_node, worker_ids)
+        cluster.for_each_multiple_concurrently(generate_input, workers_per_node, node_ids)
 
     def generate_memprog(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
         if scenario == "mage":
-            log_name_to_use = log_name_to_use = "{0}_w{1}".format(log_name, thread_id)
+            log_name_to_use = "{0}_w{1}".format(log_name, thread_id)
         else:
             # So we don't count this as a "planning" measurement
             log_name_to_use = ""
         remote.exec_sync(machine.public_ip_address, "~/generate_memprog.sh {0} {1} {2} {3} {4} {5} {6}".format(problem_name, problem_size, protocol, config_file, party, thread_id, log_name_to_use))
     if generate_fresh_memprog:
-        cluster.for_each_multiple_concurrently(generate_memprog, workers_per_node, worker_ids)
+        cluster.for_each_multiple_concurrently(generate_memprog, workers_per_node, node_ids)
 
     def run_mage(machine, global_id, thread_id):
         party = wan_party_from_global_id(cluster, global_id)
@@ -117,8 +117,8 @@ def run_wan_experiment(cluster, problem_name, problem_size, scenario, mem_limit,
 
     if protocol != "ckks":
         time.sleep(70) # Wait for TIME-WAIT state to expire
-    clear_memory_caches(cluster, worker_ids)
-    cluster.for_each_multiple_concurrently(run_mage, workers_per_node, worker_ids)
+    clear_memory_caches(cluster, node_ids)
+    cluster.for_each_multiple_concurrently(run_mage, workers_per_node, node_ids)
 
 def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, mem_limit, worker_ids, log_name = "/dev/null", workers_per_party = None, generate_fresh_input = True, generate_fresh_memprog = True):
     if workers_per_party is None:
@@ -133,7 +133,7 @@ def run_lan_experiment(cluster, problem_name, problem_size, protocol, scenario, 
     assert len(cluster.machines) == cluster.num_lan_machines
 
     program_name = "{0}_{1}".format(problem_name, problem_size)
-    config_file = "~/config/{0}/config_{1}_{2}.yaml".format("1gb" if scenario == "mage" else "unbounded", protocol, workers_per_party)
+    config_file = "~/config/{0}/config_{1}_{2}_{3}.yaml".format(mem_limit if scenario == "mage" else "unbounded", protocol, workers_per_party, 1)
 
     if isinstance(log_name, int):
         log_name = program_name + "_t{0}".format(log_name)

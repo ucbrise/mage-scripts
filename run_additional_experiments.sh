@@ -11,7 +11,7 @@ echo "Baseline:" $(expr $baseline_end - $baseline_start) | tee baseline_time
 
 ten_single_start=$(date +%s)
 ./magebench.py spawn -a 8
-./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -w 1
+./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -n 1
 ./magebench.py fetch-logs logs-workloads-2
 ./magebench.py deallocate
 ten_single_end=$(date +%s)
@@ -19,7 +19,7 @@ echo "Ten Single:" $(expr $ten_single_end - $ten_single_start) | tee ten_single_
 
 ten_parallel_start=$(date +%s)
 ./magebench.py spawn -a 8
-./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -w 4
+./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -n 4
 ./magebench.py fetch-logs logs-workloads-8
 ./magebench.py deallocate
 ten_parallel_end=$(date +%s)
@@ -70,3 +70,36 @@ password_start=$(date +%s)
 ./magebench.py deallocate
 password_end=$(date +%s)
 echo "Password Reuse:" $(expr $password_end - $password_start) | tee password_time
+
+cpir_start=$(date +%s)
+./magebench.py spawn -a 8 -s paired-noswap
+./magebench.py run-lan -p real_cpir_256 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_384 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_512 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_640 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_768 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_896 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1024 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1158 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1280 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1408 -s mage -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1536 -s mage -m max -t 1 -n 1
+./magebench.py fetch-logs logs-cpir
+./magebench.py deallocate
+
+./magebench.py spawn -a 8 -s paired-swap
+./magebench.py run-lan -p real_cpir_256 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_384 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_512 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_640 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_768 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_896 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1024 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1158 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1280 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1408 -s os -m max -t 1 -n 1
+./magebench.py run-lan -p real_cpir_1536 -s os -m max -t 1 -n 1
+./magebench.py fetch-logs logs-cpir
+./magebench.py deallocate
+cpir_end=$(date +%s)
+echo "Computational PIR:" $(expr $cpir_end - $cpir_start) | tee password_time
