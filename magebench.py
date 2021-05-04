@@ -42,7 +42,7 @@ def provision_cluster(c):
         remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1}".format(machine.provider, c.setup))
         remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
         if id < c.num_lan_machines:
-            remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config".format(id))
+            remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config {1}".format(id, "true" if c.setup.startswith("paired") else "false"))
         if c.setup in ("paired-noswap", "paired-swap"):
             for location, loc_id in c.location_to_id.items():
                 if id in range(c.num_lan_machines) or id in range(loc_id, loc_id + c.num_lan_machines):
@@ -120,7 +120,7 @@ def run_single(args):
         log_name = "{0}_{1}".format(args.label, log_name)
     if args.tag is not None:
         log_name += "_{0}".format(args.tag)
-    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers)
+    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers_per_node, args.num_nodes)
 
 def run_lan(args):
     c = cluster.Cluster.load_from_file("cluster.json")
@@ -145,9 +145,14 @@ def run_lan(args):
             worker_ids = range(len(c.machines))
         for trial in range(1, args.trials + 1):
             for scenario in args.scenarios:
-                num_workers_per_party = (len(c.machines) // 2) if args.workers is None else args.workers
-                log_name = "workers_{0}_{1}_{2}_{3}_t{4}".format(num_workers_per_party, problem_name, problem_size, scenario, trial)
-                experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers)
+                num_nodes_per_party = (len(c.machines) // 2) if args.num_nodes is None else args.num_nodes
+                if args.workers_per_node is None:
+                    log_name = "workers_{0}_{1}_{2}_{3}_t{4}".format(num_nodes_per_party, problem_name, problem_size, scenario, trial)
+                    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.num_nodes)
+                else:
+                    workers_per_node = args.workers_per_node
+                    log_name = "multiworker_{0}-{5}_{1}_{2}_{3}_t{4}".format(num_nodes_per_party, problem_name, problem_size, scenario, trial, workers_per_node)
+                    experiment.run_multiworker_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, workers_per_node, args.num_nodes)
 
 
 def make_run_wan(paired):
@@ -301,7 +306,8 @@ if __name__ == "__main__":
     parser_run.add_argument("-l", "--label")
     parser_run.add_argument("-g", "--tag")
     parser_run.add_argument("-m", "--mem-limit", type=str, default = "1gb")
-    parser_run.add_argument("-w", "--workers", type = int)
+    parser_run.add_argument("-n", "--num-nodes", type = int)
+    parser_run.add_argument("-w", "--workers-per-node", type = int)
     parser_run.set_defaults(func = run_single)
 
     parser_run_lan = subparsers.add_parser("run-lan")
@@ -309,7 +315,8 @@ if __name__ == "__main__":
     parser_run_lan.add_argument("-s", "--scenarios", action = "extend", nargs = "+", choices = ("unbounded", "mage", "os"))
     parser_run_lan.add_argument("-m", "--mem-limit", type=str, default = "1gb")
     parser_run_lan.add_argument("-t", "--trials", type = int, default = 1)
-    parser_run_lan.add_argument("-w", "--workers", type = int)
+    parser_run_lan.add_argument("-n", "--num-nodes", type = int)
+    parser_run_lan.add_argument("-w", "--workers-per-node", type = int)
     parser_run_lan.set_defaults(func = run_lan)
 
     parser_run_wan = subparsers.add_parser("run-wan")

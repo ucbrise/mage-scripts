@@ -11,7 +11,7 @@ echo "Baseline:" $(expr $baseline_end - $baseline_start) | tee baseline_time
 
 ten_single_start=$(date +%s)
 ./magebench.py spawn -a 2
-./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -w 1
+./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -n 1
 ./magebench.py fetch-logs logs-workloads-2
 ./magebench.py deallocate
 ten_single_end=$(date +%s)
@@ -19,7 +19,7 @@ echo "Ten Single:" $(expr $ten_single_end - $ten_single_start) | tee ten_single_
 
 ten_parallel_start=$(date +%s)
 ./magebench.py spawn -a 8
-./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -w 4
+./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -n 4
 ./magebench.py fetch-logs logs-workloads-8
 ./magebench.py deallocate
 ten_parallel_end=$(date +%s)
