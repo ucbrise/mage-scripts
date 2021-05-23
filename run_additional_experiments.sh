@@ -36,10 +36,9 @@ wan_conn_end=$(date +%s)
 echo "WAN Conn:" $(expr $wan_conn_end - $wan_conn_start) | tee wan_conn_time
 
 wan_ot_start=$(date +%s)
-./magebench.py spawn -a 1 -g oregon iowa virginia
+./magebench.py spawn -a 1 -g oregon iowa
 ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 15 -w 1 -o 2 4 8 16 32 64 128 256 -c 1
 ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 15 -w 1 -o 2 4 8 16 32 64 128 256 -c 1
-./magebench.py run-wan virginia -p merge_sorted_1048576 -s mage -t 15 -w 1 -o 2 4 8 16 32 64 128 256 -c 1
 ./magebench.py fetch-logs logs-wan-ot
 ./magebench.py deallocate
 wan_ot_end=$(date +%s)

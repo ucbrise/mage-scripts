@@ -102,26 +102,6 @@ def parse_program_list(program_list):
         result.append(parse_program(program))
     return result
 
-def run_single(args):
-    c = cluster.Cluster.load_from_file("cluster.json")
-    if len(sys.argv) not in (6, 7):
-        print("Usage: {0} problem_name problem_size protocol scenario [log_tag]".format(sys.argv[0]))
-        sys.exit(2)
-    problem_name, problem_size = parse_program(args.program)
-    if problem_name.startswith("real"):
-        protocol = "ckks"
-        worker_ids = range(len(c.machines) // 2)
-    else:
-        protocol = "halfgates"
-        worker_ids = range(len(c.machines))
-    scenario = args.scenario
-    log_name = "{0}_{1}_{2}".format(problem_name, problem_size, scenario)
-    if args.label is not None:
-        log_name = "{0}_{1}".format(args.label, log_name)
-    if args.tag is not None:
-        log_name += "_{0}".format(args.tag)
-    experiment.run_lan_experiment(c, problem_name, problem_size, protocol, scenario, args.mem_limit, worker_ids, log_name, args.workers_per_node, args.num_nodes)
-
 def run_lan(args):
     c = cluster.Cluster.load_from_file("cluster.json")
     if args.programs is None:
@@ -294,16 +274,6 @@ if __name__ == "__main__":
 
     parser_provision = subparsers.add_parser("provision")
     parser_provision.set_defaults(func = provision)
-
-    parser_run = subparsers.add_parser("run-single")
-    parser_run.add_argument("program")
-    parser_run.add_argument("scenario")
-    parser_run.add_argument("-l", "--label")
-    parser_run.add_argument("-g", "--tag")
-    parser_run.add_argument("-m", "--mem-limit", type=str, default = "1gb")
-    parser_run.add_argument("-n", "--num-nodes", type = int)
-    parser_run.add_argument("-w", "--workers-per-node", type = int)
-    parser_run.set_defaults(func = run_single)
 
     parser_run_lan = subparsers.add_parser("run-lan")
     parser_run_lan.add_argument("-p", "--programs", action = "extend", nargs = "+")
