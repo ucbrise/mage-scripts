@@ -37,9 +37,9 @@ def generate_ckks_keys(c):
     finally:
         shutil.rmtree("./ckks_keys")
 
-def provision_cluster(c):
+def provision_cluster(c, repository, checkout):
     def provision_machine(machine, id):
-        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1}".format(machine.provider, c.setup))
+        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1} {2} {3}".format(machine.provider, c.setup, repository, checkout))
         remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
         if id < c.num_lan_machines:
             remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config {1}".format(id, "true" if c.setup.startswith("paired") else "false"))
@@ -75,13 +75,13 @@ def spawn(args):
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
     print("Provisioning the machines...")
-    provision_cluster(c)
+    provision_cluster(c, args.repository, args.checkout)
     print("Done.")
 
 def provision(args):
     c = cluster.Cluster.load_from_file("cluster.json")
     print("Provisioning the machines...")
-    provision_cluster(c)
+    provision_cluster(c, args.repository, args.checkout)
     print("Done.")
 
 def parse_program(program):
@@ -270,6 +270,8 @@ if __name__ == "__main__":
     parser_spawn.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_spawn.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
     parser_spawn.add_argument("-s", "--wan-setup", default = "regular")
+    parser_spawn.add_argument("-r", "--repository", default = "https://github.com/ucbrise/mage")
+    parser_spawn.add_argument("-c", "--checkout", default = "main")
     parser_spawn.set_defaults(func = spawn)
 
     parser_provision = subparsers.add_parser("provision")
@@ -328,6 +330,8 @@ if __name__ == "__main__":
     parser_purge.add_argument("-d", "--large-work-disk", action = "store_true")
     parser_purge.add_argument("-g", "--gcloud-machine-locations", action = "extend", nargs = "+", choices = ("oregon", "iowa", "virginia"))
     parser_purge.add_argument("-s", "--wan-setup", default = "regular")
+    parser_purge.add_argument("-r", "--repository", default = "https://github.com/ucbrise/mage")
+    parser_purge.add_argument("-c", "--checkout", default = "main")
     parser_purge.set_defaults(func = purge)
 
     parser_fetch_logs = subparsers.add_parser("fetch-logs")

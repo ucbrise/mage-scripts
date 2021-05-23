@@ -66,10 +66,12 @@ then
 fi
 
 # Use the latest version of MAGE
+REMOTE=tobuild
+
 pushd ~/work/mage
-git fetch origin
-git checkout dev
-git pull origin dev
+git remote add $REMOTE $3
+git fetch $REMOTE
+git checkout ${REMOTE}/${4}
 make
 popd
 
