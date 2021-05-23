@@ -17,6 +17,29 @@ ten_single_start=$(date +%s)
 ten_single_end=$(date +%s)
 echo "Ten Single:" $(expr $ten_single_end - $ten_single_start) | tee ten_single_time
 
+ten_single_16gib_start=$(date +%s)
+./magebench.py spawn -a 16
+./magebench.py run-lan -p merge_sorted_8388608 loop_join_3840 matrix_vector_multiply_20480 binary_fc_layer_57344 -s mage -t 1 -n 1
+./magebench.py fetch-logs logs-16gib-workloads-2
+./magebench.py deallocate
+
+./magebench.py spawn -a 16
+./magebench.py run-lan -p binary_fc_layer_57344 -s mage -t 1 -n 1
+./magebench.py fetch-logs logs-16gib-workloads-2
+./magebench.py deallocate
+
+./magebench.py spawn -a 16 -d
+./magebench.py run-lan -p full_sort_8388608 -s mage -t 1 -n 1
+./magebench.py fetch-logs logs-16gib-workloads-2
+./magebench.py deallocate
+
+./magebench.py spawn -a 16
+./magebench.py run-lan -p real_sum_458752 real_statistics_147456 real_matrix_vector_multiply_448 real_naive_matrix_multiply_256 real_tiled_64_matrix_multiply_224 -s mage -t 1 -n 1
+./magebench.py fetch-logs logs-16gib-workloads-2
+./magebench.py deallocate
+ten_single_16gib_end=$(date +%s)
+echo "Ten Single 16GiB:" $(expr $ten_single_16gib_end - $ten_single_16gib_start) | tee ten_single_16gib_time
+
 ten_parallel_start=$(date +%s)
 ./magebench.py spawn -a 8
 ./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -n 4
@@ -26,10 +49,9 @@ ten_parallel_end=$(date +%s)
 echo "Ten Parallel:" $(expr $ten_parallel_end - $ten_parallel_start) | tee ten_parallel_time
 
 wan_conn_start=$(date +%s)
-./magebench.py spawn -a 1 -g oregon iowa virginia
+./magebench.py spawn -a 1 -g oregon iowa
 ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
 ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
-./magebench.py run-wan virginia -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
 ./magebench.py fetch-logs logs-wan-conn
 ./magebench.py deallocate
 wan_conn_end=$(date +%s)
