@@ -165,20 +165,20 @@ if __name__ == "__main__":
                                 size = "30gb"
                         elif scenario == "unbounded":
                             size = "4096gb" # Larger than the standard "unbounded" size
-                        config_dict = generate_paired_wan_config_dict(size, party_size, id, azure_ids, gcloud_ids, cluster, *ot_params)
+                        config_dict = generate_paired_wan_config_dict("halfgates", size, party_size, id, azure_ids, gcloud_ids, cluster, *ot_params)
                         output_path = os.path.join(output_dir_path, "config_halfgates_{0}_{1}_{2}.yaml".format(party_size, ot_pipeline_depth, ot_num_daemons))
                         with open(output_path, "w") as f:
                             yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)
     else:
         azure_id = id
         gcloud_id = cluster["location_to_id"][location]
-        for protocol in ("halfgates", "ckks"):
+        for protocol in ("halfgates",):
             for scenario, output_dir_path in zip(memory_bounds, dir_paths):
                 for party_size in (1, 2, 4, 8, 16):
                     for ot_pipeline_depth in tuple(2 ** i for i in range(9)):
                         for ot_num_daemons in tuple(2 ** i for i in range(9)):
                             ot_params = (ot_pipeline_depth, ot_num_daemons)
-                            config_dict = generate_wan_config_dict("halfgates", scenario, party_size, azure_id, gcloud_id, cluster, *ot_params)
+                            config_dict = generate_wan_config_dict(protocol, scenario, party_size, azure_id, gcloud_id, cluster, *ot_params)
                             output_path = os.path.join(output_dir_path, "config_halfgates_{0}_{1}_{2}.yaml".format(party_size, ot_pipeline_depth, ot_num_daemons))
                             with open(output_path, "w") as f:
                                 yaml.dump(config_dict, f, sort_keys = False, default_flow_style = False)
