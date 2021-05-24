@@ -19,22 +19,22 @@ echo "Ten Single:" $(expr $ten_single_end - $ten_single_start) | tee ten_single_
 
 ten_single_16gib_start=$(date +%s)
 ./magebench.py spawn -a 16
-./magebench.py run-lan -p merge_sorted_8388608 loop_join_3840 matrix_vector_multiply_20480 binary_fc_layer_57344 -s mage -t 1 -n 1
+./magebench.py run-lan -p merge_sorted_8388608 loop_join_3840 matrix_vector_multiply_20480 -s mage -t 1 -n 1 -m 16gb
 ./magebench.py fetch-logs logs-16gib-workloads-2
 ./magebench.py deallocate
 
 ./magebench.py spawn -a 16
-./magebench.py run-lan -p binary_fc_layer_57344 -s mage -t 1 -n 1
+./magebench.py run-lan -p binary_fc_layer_57344 -s mage -t 1 -n 1 -m 16gb
 ./magebench.py fetch-logs logs-16gib-workloads-2
 ./magebench.py deallocate
 
 ./magebench.py spawn -a 16 -d
-./magebench.py run-lan -p full_sort_8388608 -s mage -t 1 -n 1
+./magebench.py run-lan -p full_sort_8388608 -s mage -t 1 -n 1 -m 16gb
 ./magebench.py fetch-logs logs-16gib-workloads-2
 ./magebench.py deallocate
 
 ./magebench.py spawn -a 16
-./magebench.py run-lan -p real_sum_458752 real_statistics_147456 real_matrix_vector_multiply_448 real_naive_matrix_multiply_256 real_tiled_64_matrix_multiply_224 -s mage -t 1 -n 1
+./magebench.py run-lan -p real_sum_458752 real_statistics_147456 real_matrix_vector_multiply_448 real_naive_matrix_multiply_256 real_tiled_64_matrix_multiply_224 -s mage -t 1 -n 1 -m 16gb
 ./magebench.py fetch-logs logs-16gib-workloads-2
 ./magebench.py deallocate
 ten_single_16gib_end=$(date +%s)
