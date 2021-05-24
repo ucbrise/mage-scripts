@@ -26,7 +26,10 @@ def populate_top_level_params(protocol, scenario, split_factor, config, ot_pipel
             num_gb = int(scenario[:-2])
             num_bytes = num_gb << 30
             total_ideal_num_pages = num_bytes >> (config["page_shift"] + 4)
-            config["num_pages"] = (total_ideal_num_pages // split_factor) - 1536
+            extra = 1536
+            if num_gb >= 16:
+                extra = 3072
+            config["num_pages"] = (total_ideal_num_pages // split_factor) - extra
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
         config["prefetch_buffer_size"] = 256
@@ -45,7 +48,10 @@ def populate_top_level_params(protocol, scenario, split_factor, config, ot_pipel
             num_gb = int(scenario[:-2])
             num_bytes = num_gb << 30
             total_ideal_num_pages = num_bytes >> config["page_shift"]
-            config["num_pages"] = (total_ideal_num_pages // split_factor) - 48
+            extra = 48
+            if num_gb >= 16:
+                extra = 96
+            config["num_pages"] = (total_ideal_num_pages // split_factor) - extra
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
         config["prefetch_buffer_size"] = 16
