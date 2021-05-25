@@ -50,7 +50,7 @@ def populate_top_level_params(protocol, scenario, split_factor, config, ot_pipel
             total_ideal_num_pages = num_bytes >> config["page_shift"]
             extra = 48
             if num_gb >= 16:
-                extra = 96
+                extra = 192
             config["num_pages"] = (total_ideal_num_pages // split_factor) - extra
         else:
             raise RuntimeError("Unknown scenario {0}".format(scenario))
