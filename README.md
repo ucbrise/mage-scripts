@@ -132,9 +132,9 @@ You can SSH manually into one of the instances by running `ssh -i mage mage@40.9
 
 If you want to take a break, or if you're done for the day, you should deallocate the cluster's resources by running:
 ```
-$ ./magebench deallocate
+$ ./magebench.py deallocate
 ```
-This will free all of the resources associated with the cluster and delete the `cluster.json` file. _You should make sure not to move, rename, or delete the `cluster.json` file before running `./magebench.py deallocate`._ If you do, `magebench.py` won't know how to contact the machines in the cluster. A copy of `cluster.json` is placed in the home directory of the user `mage` of each machine in the cluster. If you accidentally lose the `cluster.json` file, but still know the IP address of one of the machines, you can recover `cluster.json` by using `scp`. Barring that, you can delete the cluster and start over by running `./magebench purge`, passing the same command line arguments that were passed to `./magebench spawn`. For example, if you accidentally lost the `cluster.json` file in the above example, you still could delete the cluster by running `./magebench purge -a 1 -g oregon`.
+This will free all of the resources associated with the cluster and delete the `cluster.json` file. _You should make sure not to move, rename, or delete the `cluster.json` file before running `./magebench.py deallocate`._ If you do, `magebench.py` won't know how to contact the machines in the cluster. A copy of `cluster.json` is placed in the home directory of the user `mage` of each machine in the cluster. If you accidentally lose the `cluster.json` file, but still know the IP address of one of the machines, you can recover `cluster.json` by using `scp`. Barring that, you can delete the cluster and start over by running `./magebench.py purge`, passing the same command line arguments that were passed to `./magebench.py spawn`. For example, if you accidentally lost the `cluster.json` file in the above example, you still could delete the cluster by running `./magebench.py purge -a 1 -g oregon`.
 
 When you run benchmarks using the `magebench.py` tool, the log file containing the measurements are stored on the virtual machines themselves. **Thus, you should copy the log files to the machine where you are running `./magebench.py` before deallocating the cluster.** The following command will copy the logs from each node in the cluster to a directory called `logs` on the local machine:
 ```
@@ -213,7 +213,7 @@ Ten Workloads: One Worker Per Party (5 minutes working, 10 hours waiting)
 Run the following commands:
 ```
 $ ./magebench.py spawn -a 2
-$ ./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -w 1
+$ ./magebench.py run-lan -p merge_sorted_1048576 full_sort_1048576 loop_join_2048 matrix_vector_multiply_8192 binary_fc_layer_16384 real_sum_65536 real_statistics_16384 real_matrix_vector_multiply_256 real_naive_matrix_multiply_128 real_tiled_16_matrix_multiply_128 -s unbounded mage os -t 1 -n 1
 $ ./magebench.py fetch-logs logs-workloads-2
 $ ./magebench.py deallocate
 ```
@@ -223,40 +223,22 @@ After running the `fetch-logs` command, you should see a local directory `logs-w
 
 The graph given in the paper was produced form 8 trials for each experiment, on different instances. The graph in the IPython notebook is produced using only one trial, so no error bars are present, and some variation should be expected. In particular, the error bars in the paper depict the quartiles, so there is about a 50% chance that the results obtained by running the above command will be within the error bars. My qualitative observation is that the deviation from the median appears consistent for each machine. In other words, if one workload runs more slowly (respectively, quickly) than the median on one machine or pair of machines, the remaining workloads are also likely to run more slowly (respectively, quickly) on that machine or pair of machines.
 
-The IPython notebook also prints out measurements corresponding to Tables 1 and 2 in the paper.
+The IPython notebook also prints out measurements corresponding to Table 1 in the paper.
 
 Ten Workloads: Four Workers Per Party (5 minutes working, 20 hours waiting)
 ---------------------------------------------------------------------------
 Run the following commands:
 ```
 $ ./magebench.py spawn -a 8
-$ ./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -w 4
+$ ./magebench.py run-lan -p merge_sorted_4194304 full_sort_4194304 loop_join_4096 matrix_vector_multiply_16384 binary_fc_layer_32768 real_sum_262144 real_statistics_65536 real_matrix_vector_multiply_512 real_naive_matrix_multiply_256 real_tiled_16_matrix_multiply_256 -s unbounded mage os -t 1 -n 4
 $ ./magebench.py fetch-logs logs-workloads-8
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-workloads-8` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **p = 4 Parallelism Experiments** section. Make sure that the first cell assigns `multi_node_directory` correctly (this should be `logs-workloads-8`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 9 in the paper:
+After running the `fetch-logs` command, you should see a local directory `logs-workloads-8` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **p = 4 Parallelism Experiments** section. Make sure that the first cell assigns `multi_node_directory` correctly (this should be `logs-workloads-8`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper:
 
-![Figure 9 from the OSDI 2021 paper](figures/workloads_parallel.svg)
+![Figure 10 from the OSDI 2021 paper](figures/workloads_parallel.svg)
 
 No error bars are presented in the paper, so some variation should be expected. Just as in the previous figure, all of the workloads are likely to deviate from those in the paper in the same direction.
-
-
-WAN Experiments: Parallel Connections (5 minutes working, 9 hours waiting)
---------------------------------------------------------------------------
-```
-$ ./magebench.py spawn -a 1 -g oregon iowa
-$ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 128 -c 1
-$ ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 128 -c 1
-$ ./magebench.py fetch-logs logs-wan-conn
-$ ./magebench.py deallocate
-```
-After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connections** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 10 in the paper:
-
-![Figure 10 from the OSDI 2021 paper](figures/wan_parallel.svg)
-
-For this graph, you may see some variation compared to the ones in the OSDI paper because (1) it depends on wide-area network conditions, which fluctuate, and (2) we improved MAGE after the submission to allow multiple outstanding OTs over a single connection, allowing it rely on fewer threads. To give you an idea of the expected variation, here is an example of a graph based on a more recent run of this experiment:
-
-![Results from a more recent run of this experiment](figures/wan_parallel_recent.svg)
 
 WAN Experiments: Parallel OTs (5 minutes working, 2.5 hours waiting)
 ------------------------------------------------------------------
@@ -267,10 +249,29 @@ $ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 1 -w 1 -o 2 4
 $ ./magebench.py fetch-logs logs-wan-ot
 $ ./magebench.py deallocate
 ```
-After running the `fetch-logs` command, you should see a local directory `logs-wan-ot` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: OT Parallelism** section. Make sure that the first cell assigns `wan_ot_directory` correctly (this should be `logs-wan-ot`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should show the running time decrease as the number of concurrent OTs increases. Here is results from our run, including 10 trials and error bars depicting the quartiles:
+After running the `fetch-logs` command, you should see a local directory `logs-wan-ot` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: OT Parallelism** section. Make sure that the first cell assigns `wan_ot_directory` correctly (this should be `logs-wan-ot`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should show the running time decrease as the number of concurrent OTs increases. The resulting graph, including 10 trials and error bars depicting the quartiles, should be similar to Figure 11(a) in the paper:
 
-![Sample results for this experiment](figures/wan_concurrent_ots.svg)
-
-**There is no analogue of this graph in the paper; it corresponds to the statement in Section 8.7 that we can overcome the WAN latency by performing more OTs concurrently. I *might* add a graph to this effect in the camera-ready version (with the shepherd's approval).**
+![Figure 11(a) from the OSDI 2021 paper](figures/wan_concurrent_ots.svg)
 
 To make this experiment fast, the command above runs only one trial for each point in the graph; in contrast, our sample graph above does 10 trials. As a result, the graph produced in the IPython notebook might appear less "smooth" than the sample graph above. If you have extra time, you can try increasing the number of trials (e.g., use `-t 3` or `-t 10` instead of `-t 1` when running the above command), but this will take significantly longer.
+
+WAN Experiments: Parallel Connections (5 minutes working, 9 hours waiting)
+--------------------------------------------------------------------------
+```
+$ ./magebench.py spawn -a 1 -g oregon iowa
+$ ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 128 -c 1
+$ ./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 10 -w 1 2 4 -o 128 -c 1
+$ ./magebench.py fetch-logs logs-wan-conn
+$ ./magebench.py deallocate
+```
+After running the `fetch-logs` command, you should see a local directory `logs-wan-conn` containing the log files for these experiments. In the `graphs.ipynb` IPython notebook, go to the **WAN Experiments: Number of Connections** section. Make sure that the first cell assigns `wan_conn_directory` correctly (this should be `logs-wan-conn`, where the above `fetch-logs` command placed the log files). Then, run the cells in this section. The resulting graph should be similar to Figure 11(b) in the paper:
+
+![Figure 11(b) from the OSDI 2021 paper](figures/wan_parallel.svg)
+
+For this graph, you may see some variation compared to the ones in the OSDI paper because (1) it depends on wide-area network conditions, which fluctuate, and (2) we improved MAGE after the submission to allow multiple outstanding OTs over a single connection, allowing it rely on fewer threads. To give you an idea of the expected variation, here is an example of a graph based on a more recent run of this experiment:
+
+![Results from a more recent run of this experiment](figures/wan_parallel_recent.svg)
+
+Running Additional Experiments
+==============================
+The final version of our paper includes more graphs than those reproduced above. We have added support for reproducing the remaining graphs in the `run_additional_experiments.sh` script. README instructions for these additional experiments will be added soon.

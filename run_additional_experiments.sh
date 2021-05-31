@@ -32,11 +32,6 @@ ten_single_16gib_start=$(date +%s)
 ./magebench.py run-lan -p real_sum_458752 real_statistics_147456 real_matrix_vector_multiply_448 real_naive_matrix_multiply_256 real_tiled_64_matrix_multiply_224 -s os unbounded mage -t 1 -n 1 -m 16gb
 ./magebench.py fetch-logs logs-16gib-workloads-2
 ./magebench.py deallocate
-
-./magebench.py spawn -a 16 -d
-./magebench.py run-lan -p full_sort_8388608 -s os unbounded mage -t 1 -n 1 -m 16gb
-./magebench.py fetch-logs logs-16gib-workloads-2
-./magebench.py deallocate
 ten_single_16gib_end=$(date +%s)
 echo "Ten Single 16GiB:" $(expr $ten_single_16gib_end - $ten_single_16gib_start) | tee ten_single_16gib_time
 
@@ -48,15 +43,6 @@ ten_parallel_start=$(date +%s)
 ten_parallel_end=$(date +%s)
 echo "Ten Parallel:" $(expr $ten_parallel_end - $ten_parallel_start) | tee ten_parallel_time
 
-wan_conn_start=$(date +%s)
-./magebench.py spawn -a 1 -g oregon iowa
-./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
-./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
-./magebench.py fetch-logs logs-wan-conn
-./magebench.py deallocate
-wan_conn_end=$(date +%s)
-echo "WAN Conn:" $(expr $wan_conn_end - $wan_conn_start) | tee wan_conn_time
-
 wan_ot_start=$(date +%s)
 ./magebench.py spawn -a 1 -g oregon iowa
 ./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 15 -w 1 -o 2 4 8 16 32 64 128 256 -c 1
@@ -65,6 +51,15 @@ wan_ot_start=$(date +%s)
 ./magebench.py deallocate
 wan_ot_end=$(date +%s)
 echo "WAN OT:" $(expr $wan_ot_end - $wan_ot_start) | tee wan_ot_time
+
+wan_conn_start=$(date +%s)
+./magebench.py spawn -a 1 -g oregon iowa
+./magebench.py run-wan oregon -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
+./magebench.py run-wan iowa -p merge_sorted_1048576 -s mage -t 15 -w 1 2 4 -o 128 -c 1
+./magebench.py fetch-logs logs-wan-conn
+./magebench.py deallocate
+wan_conn_end=$(date +%s)
+echo "WAN Conn:" $(expr $wan_conn_end - $wan_conn_start) | tee wan_conn_time
 
 password_start=$(date +%s)
 ./magebench.py spawn -a 4 -g oregon -s paired-noswap
