@@ -15,6 +15,8 @@ class Machine(object):
         self.wdisk_name = None
         self.gcp_zone = None
         self.provider = None
+        self.image_name = None
+        self.gcp_firewall_rule = None
 
     def as_dict(self):
         return dict(self.__dict__)

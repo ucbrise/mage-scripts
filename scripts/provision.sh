@@ -65,16 +65,6 @@ then
     sudo chown $(whoami):$(whoami) ~/work/scratch
 fi
 
-# Use the latest version of MAGE
-REMOTE=tobuild
-
-pushd ~/work/mage
-git remote add $REMOTE $3
-git fetch $REMOTE
-git checkout ${REMOTE}/${4}
-make
-popd
-
 mkdir -p ~/logs
 
 for memsize in 1g 2g 4g 8g 16g 32g 62g

@@ -184,6 +184,8 @@ if __name__ == "__main__":
                     for ot_pipeline_depth in tuple(2 ** i for i in range(9)):
                         for ot_num_daemons in tuple(2 ** i for i in range(9)):
                             ot_params = (ot_pipeline_depth, ot_num_daemons)
+                            if scenario == "max":
+                                continue # Max not needed here, but we can add support for it if needed
                             config_dict = generate_wan_config_dict(protocol, scenario, party_size, azure_id, gcloud_id, cluster, *ot_params)
                             output_path = os.path.join(output_dir_path, "config_halfgates_{0}_{1}_{2}.yaml".format(party_size, ot_pipeline_depth, ot_num_daemons))
                             with open(output_path, "w") as f:

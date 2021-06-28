@@ -39,7 +39,10 @@ def generate_ckks_keys(c):
 
 def provision_cluster(c, repository, checkout):
     def provision_machine(machine, id):
-        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1} {2} {3}".format(machine.provider, c.setup, repository, checkout))
+        if machine.image_name != "mage":
+            remote.exec_script(machine.public_ip_address, "./scripts/install_deps.sh", "--install-mage-deps --install-utils --setup-wan-tcp")
+        remote.exec_script(machine.public_ip_address, "./scripts/provision.sh", "{0} {1}".format(machine.provider, c.setup))
+        remote.exec_script(machine.public_ip_address, "./scripts/setup_code.sh", "{0} {1} {2}".format(machine.image_name, repository, checkout))
         remote.copy_to(machine.public_ip_address, False, "./cluster.json", "~")
         if id < c.num_lan_machines:
             remote.exec_script(machine.public_ip_address, "./scripts/generate_configs.py", "~/cluster.json {0} lan ~/config {1}".format(id, "true" if c.setup.startswith("paired") else "false"))
@@ -70,7 +73,7 @@ def spawn(args):
     if args.name == "":
         args.name = "mage-{0}".format(socket.gethostname())
     print("Spawning cluster...")
-    c = cloud.spawn_cluster(args.name, args.azure_machine_count, args.large_work_disk, args.wan_setup, *args.gcloud_machine_locations)
+    c = cloud.spawn_cluster(args.name, args.azure_machine_count, "mage" if args.image else "ubuntu", args.large_work_disk, args.wan_setup, args.project_gcloud, *args.gcloud_machine_locations)
     c.save_to_file("cluster.json")
     print("Waiting three minutes for the machines to start up...")
     time.sleep(180)
@@ -272,6 +275,8 @@ if __name__ == "__main__":
     parser_spawn.add_argument("-s", "--wan-setup", default = "regular")
     parser_spawn.add_argument("-r", "--repository", default = "https://github.com/ucbrise/mage")
     parser_spawn.add_argument("-c", "--checkout", default = "main")
+    parser_spawn.add_argument("-i", "--image", action = "store_true")
+    parser_spawn.add_argument("-p", "--project-gcloud", default = "rise-mage")
     parser_spawn.set_defaults(func = spawn)
 
     parser_provision = subparsers.add_parser("provision")

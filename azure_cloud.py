@@ -9,7 +9,7 @@ import cluster
 
 SUBSCRIPTION_ID = "a8bdae60-f431-4620-bf0a-fad96eb36ca4"
 LOCATION = "westus2"
-IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps-v7"
+MAGE_IMAGE_ID = "/subscriptions/a8bdae60-f431-4620-bf0a-fad96eb36ca4/resourceGroups/MAGE-2/providers/Microsoft.Compute/images/mage-deps-v7"
 
 credential = DefaultAzureCredential()
 
@@ -22,7 +22,7 @@ wdisk_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id
 ip_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-ip"
 nic_name = lambda cluster_name, instance_id: vm_name(cluster_name, instance_id) + "-nic"
 
-def spawn_cluster(c, name, count, disk_layout_name, use_large_work_disk = False, subscription_id = SUBSCRIPTION_ID, location = LOCATION, image_id = IMAGE_ID):
+def spawn_cluster(c, name, count, image_name, disk_layout_name, use_large_work_disk = False, subscription_id = SUBSCRIPTION_ID, location = LOCATION):
     cloud_init_file = "cloud-init-azure.yaml"
     if disk_layout_name == "paired-noswap":
         cloud_init_file = "cloud-init-azure-paired.yaml"
@@ -147,6 +147,18 @@ def spawn_cluster(c, name, count, disk_layout_name, use_large_work_disk = False,
                 }
             })
 
+        if image_name == "mage":
+            image_reference = {
+                "id": MAGE_IMAGE_ID
+            }
+        else:
+            image_reference = {
+                "publisher": "canonical",
+                "offer": "0001-com-ubuntu-server-focal",
+                "sku": "20_04-lts",
+                "version": "latest"
+            }
+
         poller = compute_client.virtual_machines.begin_create_or_update(resource_group, vm_name(name, id),
         {
             "location": location,
@@ -155,9 +167,7 @@ def spawn_cluster(c, name, count, disk_layout_name, use_large_work_disk = False,
                 "vm_size": "Standard_D16d_v4"
             },
             "storage_profile": {
-                "image_reference": {
-                    "id": IMAGE_ID
-                },
+                "image_reference": image_reference,
                 "data_disks": data_disks
             },
             "os_profile": {
@@ -189,6 +199,7 @@ def spawn_cluster(c, name, count, disk_layout_name, use_large_work_disk = False,
         c.machines[id].vm_name = vm_result.name
         c.machines[id].disk_name = vm_result.storage_profile.os_disk.name
         c.machines[id].provider = "azure"
+        c.machines[id].image_name = image_name
 
     c.for_each_concurrently(spawn_vm, range(count))
 

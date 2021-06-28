@@ -3,6 +3,7 @@ import googleapiclient.discovery
 import cluster
 
 GCP_PROJECT = "rise-mage"
+GCP_FIREWALL_RULE = "mage-wan"
 
 oregon = ("us-west1", "b")
 iowa = ("us-central1", "b")
@@ -36,7 +37,7 @@ def wait_for_operation(compute, project, zone, operation):
         time.sleep(1)
 
 # Reference: https://cloud.google.com/compute/docs/reference/rest/v1/instances/insert
-def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, region, zone_letter, project_name = GCP_PROJECT):
+def spawn_instance(m, name, instance_type, num_local_ssds, image_name, disk_layout_name, region, zone_letter, project_name = GCP_PROJECT):
     cloud_init_file = "cloud-init-gcp.yaml"
     if disk_layout_name == "paired-noswap":
         cloud_init_file = "cloud-init-gcp-paired.yaml"
@@ -49,7 +50,23 @@ def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, reg
     target_zone = "{0}-{1}".format(region, zone_letter)
     # Based on https://cloud.google.com/compute/docs/tutorials/python-guide
 
-    image_response = compute.images().getFromFamily(project = project_name, family = "mage-deps").execute()
+    if image_name == "mage":
+        image_response = compute.images().getFromFamily(project = project_name, family = "mage-deps").execute()
+        image_link = image_response["selfLink"]
+    else:
+        image_response = compute.images().getFromFamily(project = "ubuntu-os-cloud", family = "ubuntu-2004-lts").execute()
+        image_link = image_response["selfLink"]
+        #image_link = "projects/ubuntu-os-cloud/global/images/ubuntu-2004-focal-v20210623"
+
+    # Create firewall rule for inbound WAN traffic if it does not already exist
+    prev_firewalls = compute.firewalls().list(project = GCP_PROJECT, filter = "name = {0}".format(GCP_FIREWALL_RULE)).execute()
+    if "items" not in prev_firewalls or len(prev_firewalls["items"]) == 0:
+        compute.firewalls().insert(project = GCP_PROJECT, body = {
+            "name": GCP_FIREWALL_RULE,
+            "description": "Allow inbound TCP connections for wide-are network experiments to benchmark MAGE.",
+            "targetTags": [GCP_FIREWALL_RULE],
+            "allowed": [{"IPProtocol": "tcp", "ports": ["57000-57999"]}]
+        }).execute()
 
     local_ssds = []
     for i in range(num_local_ssds):
@@ -88,7 +105,7 @@ def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, reg
         },
         "tags": {
             "items": [
-                "mage-wan" # Associates this instance with a firewall rule that allows inbound TCP connections on the relevant ports
+                GCP_FIREWALL_RULE # Associates this instance with the firewall rule created above
             ]
         },
         "disks": [
@@ -100,7 +117,7 @@ def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, reg
                 "autoDelete": True,
                 "deviceName": name,
                 "initializeParams": {
-                    "sourceImage": image_response["selfLink"],
+                    "sourceImage": image_link,
                     "diskType": "projects/{0}/zones/{1}/diskTypes/pd-standard".format(project_name, target_zone),
                     "diskSizeGb": "10",
                 },
@@ -171,6 +188,7 @@ def spawn_instance(m, name, instance_type, num_local_ssds, disk_layout_name, reg
     m.disk_name = info["disks"][0]["deviceName"]
     m.gcp_zone = target_zone
     m.provider = "gcloud"
+    m.image = image_name
 
 def deallocate_instance(m, project_name = GCP_PROJECT):
     deallocate_instance_by_info(m.gcp_zone, m.vm_name, project_name)

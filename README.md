@@ -81,11 +81,13 @@ We use the term _cluster_ to mean a group of (virtual) machines that are used to
 
 One can use `magebench.py` to spawn a cluster, with a particular configuration passed to the cluster on the command line. This exercise will help you get familiar with this arrangement.
 
+If you are using your own Google Cloud account, you'll need to specify the name of your Google Cloud project on the command line, via the `-p` flag to `./magebench.py spawn`. For example, if your Google Cloud project is `myproject`, you should run the command below as `./magebench.py spawn -a 1 -g oregon -p myproject`. By default, the project name used is `rise-mage`, so you may also prefer to just create a Google Cloud project with that name for the purpose of running these commands, so you don't have to change them manually from what's given below.
+
 Run the following command:
 ```
 $ ./magebench.py spawn -a 1 -g oregon
 ```
-This command will spawn one virtual machine instance on Microsoft Azure and one virtual machine instance on Google Cloud. Microsoft Azure instances are always in US West 2 (Oregon); the Google Cloud instance is in `us-west1` (as indicated by the `oregon` CLI argument). Then, it will wait for a few minutes for the virtual machines to boot. After that, it will run scripts (called _provisioning_) to establish shared CKKS secrets across the machines (so that they can work together to perform a computation using CKKS) and generate configuration files for experiments using the machines' IP addresses. There is also a `./magebench.py provision` command, but you do not normally need to run it because `magebench.py spawn` will provision the machines already.
+This command will spawn one virtual machine instance on Microsoft Azure and one virtual machine instance on Google Cloud. Microsoft Azure instances are always in US West 2 (Oregon); the Google Cloud instance is in `us-west1` (as indicated by the `oregon` CLI argument). Then, it will wait for a few minutes for the virtual machines to boot. After that, it will run scripts (called _provisioning_) to install MAGE, establish shared CKKS secrets across the machines (so that they can work together to perform a computation using CKKS), and generate configuration files for experiments using the machines' IP addresses. There is also a `./magebench.py provision` command, but you do not normally need to run it because `magebench.py spawn` will provision the machines already.
 
 Once you've spawned the cluster, you'll notice that a new file, `cluster.json` has been created. This file allows `magebench.py` to keep track of what resources it has allocated, including the IP addresses of the virtual machines so that it can interact with them. If you're curious, you can use Python to pretty-print `cluster.json`, which will produce output similar to this:
 ```
@@ -134,13 +136,17 @@ If you want to take a break, or if you're done for the day, you should deallocat
 ```
 $ ./magebench.py deallocate
 ```
-This will free all of the resources associated with the cluster and delete the `cluster.json` file. _You should make sure not to move, rename, or delete the `cluster.json` file before running `./magebench.py deallocate`._ If you do, `magebench.py` won't know how to contact the machines in the cluster. A copy of `cluster.json` is placed in the home directory of the user `mage` of each machine in the cluster. If you accidentally lose the `cluster.json` file, but still know the IP address of one of the machines, you can recover `cluster.json` by using `scp`. Barring that, you can delete the cluster and start over by running `./magebench.py purge`, passing the same command line arguments that were passed to `./magebench.py spawn`. For example, if you accidentally lost the `cluster.json` file in the above example, you still could delete the cluster by running `./magebench.py purge -a 1 -g oregon`.
+This will free all of the resources associated with the instances and delete the `cluster.json` file. _You should make sure not to move, rename, or delete the `cluster.json` file before running `./magebench.py deallocate`._ If you do, `magebench.py` won't know how to contact the machines in the cluster. A copy of `cluster.json` is placed in the home directory of the user `mage` of each machine in the cluster. If you accidentally lose the `cluster.json` file, but still know the IP address of one of the machines, you can recover `cluster.json` by using `scp`. Barring that, you can delete the cluster and start over by running `./magebench.py purge`, passing the same command line arguments that were passed to `./magebench.py spawn`. For example, if you accidentally lost the `cluster.json` file in the above example, you still could delete the cluster by running `./magebench.py purge -a 1 -g oregon`.
+
+The one resource that isn't freed is a firewall rule called `mage-wan` that is created for the Google Cloud instances, but isn't associated with any single instance. It's free of charge (according to https://cloud.google.com/vpc/pricing#firewall-rules), so there's no harm in keeping it alive. If you want to delete it, you'll need to do so manually.
 
 When you run benchmarks using the `magebench.py` tool, the log file containing the measurements are stored on the virtual machines themselves. **Thus, you should copy the log files to the machine where you are running `./magebench.py` before deallocating the cluster.** The following command will copy the logs from each node in the cluster to a directory called `logs` on the local machine:
 ```
 $ ./magebench.py fetch-logs
 ```
 Once you have the logs locally, you can use an IPython notebook to generate figures in the same form as the ones in the OSDI paper. Run `jupyter notebook` and open `graphs.ipynb` to do this.
+
+**Note on advanced usage:** The above command installs MAGE from scratch on each node, which is robust but takes a long time. The `-i` option (as in, `./magebench.py spawn -a 1 -g oregon -i`) uses a pre-installed image instead, which is faster. Unfortunately, there isn't an easy way to make an image public in Azure, so this optimization won't work for you unless I've shared the corresponding images with you. If you're interested, there are additional command-line flags you can use, which you can find at the bottom of `magebench.py`.
 
 A Simple, Guided Example (15 minutes working, 20 minutes waiting)
 -----------------------------------------------------------------
