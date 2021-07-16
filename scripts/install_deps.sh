@@ -59,6 +59,9 @@ do
             echo "net.ipv4.tcp_keepalive_time = 240" | sudo tee -a /etc/sysctl.conf
             echo "net.ipv4.tcp_keepalive_intvl = 65" | sudo tee -a /etc/sysctl.conf
             echo "net.ipv4.tcp_keepalive_probes = 5" | sudo tee -a /etc/sysctl.conf
+
+            # Reload /etc/sysctl.conf (so you don't have to reboot to effect the above changes)
+            sudo sysctl -p /etc/sysctl.conf
             ;;
         *)
             echo "Unknown command-line flag" $flag

@@ -56,6 +56,8 @@ fi
 mkdir -p ~/work
 sudo mount ${DISK_DEVICE} ~/work
 sudo chown $(whoami):$(whoami) ~/work
+# If not using a pre-installed image, this line will fail, as /opt won't exist.
+# It doesn't harm anything, so I didn't bother wrapping it in the appropriate "if" statement.
 cp -r /opt/* ~/work
 
 mkdir -p ~/work/scratch
